@@ -1,7 +1,7 @@
 #include "hkit.h"
 #include "hstr.h"
 
-void (*error_handler)(HError err) = null;
+void (*error_handler)(HError err) = HKIT_DefaultErrorHandler;
 
 void HKIT_Init(void (*err_handler)(HError err))
 {
@@ -17,17 +17,26 @@ u8 *HKIT_ErrorToString(HError err, u8 *str)
 {
     switch (err) {
         case HERROR_STR_Overflow:
-            HSTR_Copy(str, "字符串溢出上限 65535 字节");
+            HSTR_Copy(str, "String overflows over 65535 bytes");
             break;
 
         case HERROR_DEBUG_NotInited:
-            HSTR_Copy(str, "HDEBUG 没有初始化, 需要调用 HDEBUG_Init()");
+            HSTR_Copy(str, "HDEBUG is not initialized.\r\n HDEBUG_Init(UART_HandleType_Def) is required.");
             break;
 
         default:
-            HSTR_Copy(str, "未知错误!");
-            // TODO: 等以后有整数转字符串了，在这里补错误代码
+            HSTR_Copy(str, "Unknown Error! Code: ");
+            HSTR_Conn(str, HSTR_U8ToString(err, str));
             break;
     }
     return str;
+}
+
+void HKIT_DefaultErrorHandler(HError err)
+{
+#ifdef ENABLE_HDEBUG
+    if (HDEBUG_IsInited()) {
+        HDPrintError(err);
+    }
+#endif
 }

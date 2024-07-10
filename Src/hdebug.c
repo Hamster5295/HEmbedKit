@@ -10,6 +10,13 @@ void HDEBUG_Init(UART_HandleTypeDef *huart)
     hdebug_port = huart;
 }
 
+bool HDEBUG_IsInited()
+{
+    return hdebug_port != null;
+}
+
+#ifdef ENABLE_HDEBUG
+
 void HDEBUG_Print(u8 *str)
 {
     HDEBUG_ASSERT_INIT();
@@ -32,3 +39,5 @@ void HDEBUG_PrintError(HError code)
     u8 buffer[64];
     HDEBUG_Println(HKIT_ErrorToString(code, buffer));
 }
+
+#endif

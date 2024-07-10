@@ -70,12 +70,20 @@
 #endif
 
 // 函数
+
 /**
  * 初始化，配置输出串口
  * @param huart 调试信息输出串口
  */
 void HDEBUG_Init(UART_HandleTypeDef *huart);
 
+/**
+ * 检查 HDEBUG 模块是否初始化了
+ * @return 是否初始化了
+ */
+bool HDEBUG_IsInited();
+
+#ifdef ENABLE_HDEBUG
 /**
  * 不换行地输出字符串
  * @param str 要打印的字符串
@@ -98,5 +106,6 @@ void HDEBUG_PrintCRLF();
  * @param code 错误码
  */
 void HDEBUG_PrintError(HError code);
+#endif // ENABLE_HDEBUG
 
 #endif // __HDEBUG_H__

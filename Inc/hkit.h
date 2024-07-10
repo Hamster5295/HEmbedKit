@@ -14,6 +14,8 @@
 #define f32   float
 #define f64   double
 
+#define bool u8
+
 #define true  1
 #define false 0
 #define null  0
@@ -59,5 +61,10 @@ void HKIT_TriggerError(HError err);
  * @return str 指针本身
  */
 u8* HKIT_ErrorToString(HError err, u8* str);
+
+/**
+ * 默认错误处理器，会将错误转为字符串后输出
+ */
+void HKIT_DefaultErrorHandler(HError err);
 
 #endif // __HKIT_H__
