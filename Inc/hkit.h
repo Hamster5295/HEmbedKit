@@ -57,10 +57,9 @@ void HKIT_TriggerError(HError err);
 /**
  * 将错误代码转化为解释
  * @param err 错误代码
- * @param str 存放解释的字符串
- * @return str 指针本身
+ * @return 存放错误信息的字符串
  */
-u8* HKIT_ErrorToString(HError err, u8* str);
+u8* HKIT_ErrorToString(HError err);
 
 /**
  * 默认错误处理器，会将错误转为字符串后输出

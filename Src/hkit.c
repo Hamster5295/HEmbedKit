@@ -13,23 +13,18 @@ void HKIT_TriggerError(HError err)
     if (error_handler != null) error_handler(err);
 }
 
-u8 *HKIT_ErrorToString(HError err, u8 *str)
+u8 *HKIT_ErrorToString(HError err)
 {
     switch (err) {
         case HERROR_STR_Overflow:
-            HSTR_Copy(str, "String overflows over 65535 bytes");
-            break;
+            return HSTR_New("String overflows over 65535 bytes");
 
         case HERROR_DEBUG_NotInited:
-            HSTR_Copy(str, "HDEBUG is not initialized.\r\n HDEBUG_Init(UART_HandleType_Def) is required.");
-            break;
+            return HSTR_New("HDEBUG is not initialized.\r\n HDEBUG_Init(UART_HandleType_Def) is required.");
 
         default:
-            HSTR_Copy(str, "Unknown Error! Code: ");
-            HSTR_Conn(str, HSTR_U8ToString(err, str));
-            break;
+            return HSTP_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
     }
-    return str;
 }
 
 void HKIT_DefaultErrorHandler(HError err)

@@ -1,11 +1,35 @@
 #include "hstr.h"
 
-u16 HSTR_Len(u8 *str)
+u8 hstr_buffer[HSTR_BUFFER_SIZE];
+u32 hstr_buffer_ptr = 0;
+
+/**
+ * 从缓冲区分配 size 长度的空间并给出
+ * @param size 需要分配的长度
+ * @return 分配后空间的首地址
+ */
+u8 *hstr_alloc(u16 size)
+{
+    HDEBUG_ASSERT_TRUE(size < HSTR_BUFFER_SIZE, HERROR_STR_Overflow);
+    if (HSTR_BUFFER_SIZE - hstr_buffer_ptr < size) {
+        hstr_buffer_ptr = size;
+        return hstr_buffer;
+    } else {
+        u8 *addr = hstr_buffer + hstr_buffer_ptr;
+        hstr_buffer_ptr += size;
+        return addr;
+    }
+}
+
+u8 *HSTR_New(u8 *data)
+{
+    return HSTR_Copy(hstr_alloc(HSTR_GetLen(data)), data);
+}
+
+u16 HSTR_GetLen(u8 *str)
 {
     u16 len = 0;
     while (!HSTR_IS_END(str, len)) len++;
-
-    HDEBUG_ASSERT_TRUE(len < HSTR_MAX_LENGTH, HERROR_STR_Overflow);
     return len;
 }
 
@@ -17,39 +41,21 @@ u8 *HSTR_Copy(u8 *dest, u8 *source)
         idx++;
     }
     *(dest + idx) = HSTR_END_MARK;
-
-    HDEBUG_ASSERT_TRUE(idx < HSTR_MAX_LENGTH, HERROR_STR_Overflow);
     return dest;
 }
 
-u8 *HSTR_Conn(u8 *left, u8 *right)
+u8 *HSTP_Concat(u8 *left, u8 *right)
 {
-    HSTR_Copy(HSTR_END_PTR(left), right);
-    return left;
-}
-
-u8 *HSTR_Conns(u16 size, u8 *base, ...)
-{
-    va_list arg;
-    va_start(arg, base);
-
-    u8 *ptr;
-    u16 offset = HSTR_Len(base);
-    for (u16 i = 0; i < size; i++) {
-        ptr = va_arg(arg, u8 *);
-        HSTR_Copy(base + offset, ptr);
-        offset += HSTR_Len(ptr);
-    }
-    va_end(arg);
-
-    HDEBUG_ASSERT_TRUE(offset < HSTR_MAX_LENGTH, HERROR_STR_Overflow);
-    return base;
+    u16 len_left = HSTR_GetLen(left);
+    u8 *str      = hstr_alloc(len_left + HSTR_GetLen(right));
+    HSTR_Copy(str + len_left, right);
+    return str;
 }
 
 u8 HSTR_Compare(u8 *left, u8 *right)
 {
     u16 ptr = 0;
-    while (ptr < HSTR_MAX_LENGTH) {
+    while (ptr < HSTR_BUFFER_SIZE) {
         if (HSTR_IS_END(left, ptr)) {
             return HSTR_IS_END(right, ptr) ? 0 : 0xFF;
         } else if (HSTR_IS_END(right, ptr))
@@ -64,32 +70,40 @@ u8 HSTR_Compare(u8 *left, u8 *right)
     return 0;
 }
 
-u8 *HSTR_U8ToString(u8 number, u8 *str)
+u8 HSTR_Equal(u8 *left, u8 *right, u16 len)
 {
-    return HSTR_U32ToString(number & 0xFF, str);
+    for (u16 i = 0; i < len; i++)
+        if (*(left + i) != *(right + i)) return false;
+    return true;
 }
 
-u8 *HSTR_U16ToString(u16 number, u8 *str)
+u8 *HSTR_U8ToString(u8 number)
 {
-    return HSTR_U32ToString(number & 0xFFFF, str);
+    return HSTR_U32ToString(number & 0xFF);
 }
 
-u8 *HSTR_U32ToString(u32 number, u8 *str)
+u8 *HSTR_U16ToString(u16 number)
 {
-    u8 i = 0;
+    return HSTR_U32ToString(number & 0xFFFF);
+}
+
+u8 *HSTR_U32ToString(u32 number)
+{
+    u8 i          = 0;
+    u8 buffer[10] = {0};
+
     for (; i < 10; i++) // 最大10位
     {
-        *(str + i) = number % 10 + '0';
+        *(buffer + i) = number % 10 + '0';
         number /= 10;
         if (number == 0) break;
     }
 
-    u8 len = i + 1;
-    for (u8 j = 0; j < len / 2; (j++, i--)) {
-        // 他们加起来也是256以内的，这样交换当然没问题
-        *(str + j) += *(str + i);
-        *(str + i) = *(str + j) - *(str + i);
-        *(str + j) -= *(str + i);
+    u8 len  = i + 1;
+    u8 *str = hstr_alloc(len);
+
+    for (u8 j = 0; j < len; (j++, i--)) {
+        *(str + j) = *(buffer + i);
     }
     return str;
 }
