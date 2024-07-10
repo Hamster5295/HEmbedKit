@@ -2,6 +2,16 @@
 一个硬件库，重写了很多标准函数以实现明确的行为定义！  
 需要与 STM32 HAL 库配合使用  
 
+## Example
+```C
+#include "hdebug.h"
+
+HDEBUG_Init(&huart1);
+
+HDPrintln("Hello World!");
+
+```
+
 ## Roadmap
 - [x] 数据类型定义
 - [x] 错误处理
