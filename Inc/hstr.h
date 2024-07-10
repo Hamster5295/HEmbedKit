@@ -86,8 +86,6 @@ u8 HSTR_Compare(u8 *left, u8 *right);
  */
 bool HSTR_Equal(u8 *left, u8 *right, u16 len);
 
-// u8 HSTR_Compare
-
 /**
  * 将 8 位无符号整数转换为字符串
  * @param number 要转换的数字
@@ -108,5 +106,26 @@ u8 *HSTR_U16ToString(u16 number);
  * @return 字符串首位
  */
 u8 *HSTR_U32ToString(u32 number);
+
+/**
+ * 将 8 位有符号整数转换为字符串
+ * @param number 要转换的数字
+ * @return 字符串首位
+ */
+u8 *HSTR_I8ToString(i8 number);
+
+/**
+ * 将 16 位有符号整数转换为字符串
+ * @param number 要转换的数字
+ * @return 字符串首位
+ */
+u8 *HSTR_I16ToString(i16 number);
+
+/**
+ * 将 32 位有符号整数转换为字符串
+ * @param number 要转换的数字
+ * @return 字符串首位
+ */
+u8 *HSTR_I32ToString(i32 number);
 
 #endif // __HSTR_H__

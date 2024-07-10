@@ -107,3 +107,42 @@ u8 *HSTR_U32ToString(u32 number)
     }
     return str;
 }
+
+u8 *HSTR_I8ToString(i8 number)
+{
+    return HSTR_I32ToString(number & 0xFF);
+}
+
+u8 *HSTR_I16ToString(i16 number)
+{
+    return HSTR_I32ToString(number & 0xFFFF);
+}
+
+u8 *HSTR_I32ToString(i32 number)
+{
+    u8 i          = 0;
+    u8 buffer[11] = {0};
+    bool neg      = number < 0;
+
+    for (; i < 10; i++) // 最大10位
+    {
+        *(buffer + i) = number % 10 + '0';
+        number /= 10;
+        if (number == 0) break;
+    }
+
+    u8 len = i + 1;
+
+    if (neg) {
+        buffer[len] = '-';
+        len++;
+        i++;
+    }
+
+    u8 *str = hstr_alloc(len);
+
+    for (u8 j = 0; j < len; (j++, i--)) {
+        *(str + j) = *(buffer + i);
+    }
+    return str;
+}
