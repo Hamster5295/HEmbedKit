@@ -1,6 +1,6 @@
 #include "hstr.h"
 
-u8 hstr_buffer[HSTR_BUFFER_SIZE];
+u8 hstr_buffer[HSTR_BUFFER_SIZE + 1]; // +1 是为了最后一个字符串的 \0 放得下
 u32 hstr_buffer_ptr = 0;
 
 /**
