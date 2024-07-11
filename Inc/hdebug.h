@@ -82,7 +82,7 @@ bool HDEBUG_IsAvailable();
  * 初始化，配置输出串口
  * @param huart 调试信息输出串口
  */
-void __HDEBUG_Init(UART_HandleTypeDef *huart);
+void __HDEBUG_Init(UART *huart);
 
 /**
  * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除

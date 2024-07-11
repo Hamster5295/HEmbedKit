@@ -1,6 +1,10 @@
 #include "hdebug.h"
 #include "hstr.h"
 
+#ifdef ENABLE_HDEBUG
+UART *hdebug_port = null;
+#endif
+
 bool HDEBUG_IsAvailable()
 {
 #ifdef ENABLE_HDEBUG
@@ -12,11 +16,9 @@ bool HDEBUG_IsAvailable()
 
 #ifdef ENABLE_HDEBUG
 
-UART_HandleTypeDef *hdebug_port = null;
+#define HDEBUG_ASSERT_INIT() HDEBUG_ASSERT_TRUE(hdebug_port, HERROR_DEBUG_Unavailable)
 
-#define HDEBUG_ASSERT_INIT() HDEBUG_ASSERT_TRUE(hdebug_port, HERROR_DEBUG_NotInited)
-
-void __HDEBUG_Init(UART_HandleTypeDef *huart)
+void __HDEBUG_Init(UART *huart)
 {
     hdebug_port = huart;
 }
