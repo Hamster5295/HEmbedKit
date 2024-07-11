@@ -71,14 +71,13 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
     hwifi_buffer[size] = HSTR_END_MARK;
 
-    HDEBUG_Print("[HWiFi] Recv: ");
-    HDEBUG_PrintSize(hwifi_buffer, size);
+    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", hwifi_buffer), size + 6);
 
     switch (hwifi_state & 0x00FF) {
 
         case HWIFI_Initing:
             if (HSTR_Equal(hwifi_buffer + size - 5, "ATE\r\n", 5) || HSTR_Equal(hwifi_buffer + size - 4, "OK\r\n", 4)) {
-                HDEBUG_Println("HWiFi Initialized");
+                HDEBUG_Log("HWiFi", "Initialized");
                 result_handler(hwifi_ctx, HAL_OK, hwifi_buffer);
             } else {
                 HKIT_TriggerError(HERROR_WIFI_InitFailed);

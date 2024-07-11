@@ -53,7 +53,7 @@
 /**
  * 输出换行符 \\r\\n
  */
-#define HDEBUG_PrintCRLF()          __HDEBUG_PrintCRLF()
+#define HDEBUG_PrintCRLF() __HDEBUG_PrintCRLF()
 
 /**
  * 打印指定长度的字符串
@@ -68,13 +68,46 @@
  */
 #define HDEBUG_PrintError(code) __HDEBUG_PrintError(code)
 
+/**
+ * 以一个比较工整的格式输出
+ * @param module 模块名称，会放在输出的前缀
+ * @param msg 输出信息
+ */
+#define HDEBUG_Log(module, msg) \
+    do {                        \
+        HDEBUG_PrintCRLF();     \
+        HDEBUG_Print("[");      \
+        HDEBUG_Print(module);   \
+        HDEBUG_Print("] ");     \
+        HDEBUG_Println(msg);    \
+        HDEBUG_PrintCRLF();     \
+    } while (0)
+
+/**
+ * 以一个比较工整的格式输出指定长度的内容
+ * @param module 模块名称，会放在输出的前缀
+ * @param msg 输出信息首位置
+ * @param len 输出长度
+ */
+#define HDEBUG_LogSize(module, msg, len) \
+    do {                                 \
+        HDEBUG_PrintCRLF();              \
+        HDEBUG_Print("[");               \
+        HDEBUG_Print(module);            \
+        HDEBUG_Print("] ");              \
+        HDEBUG_PrintSize(msg, len);      \
+        HDEBUG_PrintCRLF();              \
+    } while (0)
+
 #else
-#define HDEBUG_Init(huart)       //
-#define HDEBUG_Print(str)        //
-#define HDEBUG_Println(str)     //
-#define HDEBUG_PrintCRLF(str)   //
-#define HDEBUG_PrintSize(str, size)   //
-#define HDEBUG_PrintError(code) //
+#define HDEBUG_Init(huart)               //
+#define HDEBUG_Print(str)                //
+#define HDEBUG_Println(str)              //
+#define HDEBUG_PrintCRLF(str)            //
+#define HDEBUG_PrintSize(str, size)      //
+#define HDEBUG_PrintError(code)          //
+#define HDEBUG_Log(module, msg)          //
+#define HDEBUG_LogSize(module, msg, len) //
 #endif
 
 // 函数
