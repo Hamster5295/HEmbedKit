@@ -36,9 +36,9 @@ typedef enum {
 
     // DEBUG 错误
     /**
-     * 当 HDEBUG_Init(UART_HandleType_Def) 没有被调用过，却使用了 HDEBUG 函数时触发
+     * 当 HDEBUG 不可用，却使用了 HDEBUG 函数时触发，可能是因为没有定义 ENABLE_HDEBUG 或调用初始化 HDEBUG_Init(huart)
      */
-    HERROR_DEBUG_NotInited = 0x20
+    HERROR_DEBUG_Unavailable = 0x20
 } HError;
 
 // 函数

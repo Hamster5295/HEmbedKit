@@ -17,10 +17,10 @@ u8 *HKIT_ErrorToString(HError err)
 {
     switch (err) {
         case HERROR_STR_Overflow:
-            return HSTR_New("String overflows over 65535 bytes");
+            return HSTR_New("String overflows. Define HSTR_BUFFER_SIZE as a larger value!");
 
-        case HERROR_DEBUG_NotInited:
-            return HSTR_New("HDEBUG is not initialized.\r\n HDEBUG_Init(UART_HandleType_Def) is required.");
+        case HERROR_DEBUG_Unavailable:
+            return HSTR_New("HDEBUG is not available.\r\nENABLE_HDEBUG is not defined, or HDEBUG_Init(huart) is not called in advance.");
 
         default:
             return HSTP_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
@@ -30,8 +30,8 @@ u8 *HKIT_ErrorToString(HError err)
 void HKIT_DefaultErrorHandler(HError err)
 {
 #ifdef ENABLE_HDEBUG
-    if (HDEBUG_IsInited()) {
-        HDPrintError(err);
+    if (HDEBUG_IsAvailable()) {
+        HDebug_PrintError(err);
     }
 #endif
 }
