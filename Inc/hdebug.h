@@ -36,76 +36,77 @@
  * 初始化，配置输出串口
  * @param huart 调试信息输出串口
  */
-#define HDInit(huart) HDEBUG_Init(huart)
+#define HDebug_Init(huart) __HDEBUG_Init(huart)
 
 /**
  * 不换行地输出字符串
  * @param str 要打印的字符串
  */
-#define HDPrint(str) HDEBUG_Print(str)
+#define HDebug_Print(str) __HDEBUG_Print(str)
 
 /**
  * 输出一行字符串
  * @param str 要打印的字符串
  */
-#define HDPrintln(str) HDEBUG_Println(str)
+#define HDebug_Println(str) __HDEBUG_Println(str)
 
 /**
  * 输出换行符 \\r\\n
  */
-#define HDPrintCRLF() HDEBUG_PrintCRLF()
+#define HDebug_PrintCRLF() __HDEBUG_PrintCRLF()
 
 /**
  * 输出错误信息
  * @param code 错误码
  */
-#define HDPrintError(code) HDEBUG_PrintError(code)
+#define HDebug_PrintError(code) __HDEBUG_PrintError(code)
 
 #else
-#define HDInit(huart)      //
-#define HDPrint(str)       //
-#define HDPrintln(str)     //
-#define HDPrintCRLF(str)   //
-#define HDPrintError(code) //
+#define HDebug_Init(huart)       //
+#define HDebug_Print(str)        //
+#define HDDebug_Println(str)     //
+#define HDDebug_PrintCRLF(str)   //
+#define HDDebug_PrintError(code) //
 #endif
 
 // 函数
-
 /**
- * 初始化，配置输出串口
- * @param huart 调试信息输出串口
+ * 检查 HDEBUG 模块是否可以使用
+ * @return 是否可以使用
  */
-void HDEBUG_Init(UART_HandleTypeDef *huart);
-
-/**
- * 检查 HDEBUG 模块是否初始化了
- * @return 是否初始化了
- */
-bool HDEBUG_IsInited();
+bool HDEBUG_IsAvailable();
 
 #ifdef ENABLE_HDEBUG
 /**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除
+ * 初始化，配置输出串口
+ * @param huart 调试信息输出串口
+ */
+void __HDEBUG_Init(UART_HandleTypeDef *huart);
+
+/**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除
  * 不换行地输出字符串
  * @param str 要打印的字符串
  */
-void HDEBUG_Print(u8 *str);
+void __HDEBUG_Print(u8 *str);
 
 /**
  * 输出一行字符串
  * @param str 要打印的字符串
  */
-void HDEBUG_Println(u8 *str);
+void __HDEBUG_Println(u8 *str);
 
 /**
  * 输出换行符 \\r\\n
  */
-void HDEBUG_PrintCRLF();
+void __HDEBUG_PrintCRLF();
 
 /**
  * 输出错误信息
  * @param code 错误码
  */
-void HDEBUG_PrintError(HError code);
+void __HDEBUG_PrintError(HError code);
 #endif // ENABLE_HDEBUG
 
 #endif // __HDEBUG_H__
