@@ -55,7 +55,7 @@ typedef enum {
     /**
      * 当 HWIFI 初始化时，未能获得 AT 响应触发
      */
-    HERROR_WIFI_InitFailed  = 0x31,
+    HERROR_WIFI_InitFailed = 0x31,
 } HError;
 
 // 函数

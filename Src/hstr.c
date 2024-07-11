@@ -48,6 +48,7 @@ u8 *HSTR_Concat(u8 *left, u8 *right)
 {
     u16 len_left = HSTR_GetLen(left);
     u8 *str      = hstr_alloc(len_left + HSTR_GetLen(right));
+    HSTR_Copy(str, left);
     HSTR_Copy(str + len_left, right);
     return str;
 }
