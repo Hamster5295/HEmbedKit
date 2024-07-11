@@ -44,7 +44,18 @@ typedef enum {
     /**
      * 当 HDEBUG 不可用，却使用了 HDEBUG 函数时触发，可能是因为没有定义 ENABLE_HDEBUG 或调用初始化 HDEBUG_Init(huart)
      */
-    HERROR_DEBUG_Unavailable = 0x20
+    HERROR_DEBUG_Unavailable = 0x20,
+
+    // WiFi 错误
+    /**
+     * 当 HWIFI 尚未初始化，却先调用了其他相关函数时触发。需要优先调用初始化 HWIFI_Init()
+     */
+    HERROR_WIFI_Unavailable = 0x30,
+
+    /**
+     * 当 HWIFI 初始化时，未能获得 AT 响应触发
+     */
+    HERROR_WIFI_InitFailed  = 0x31,
 } HError;
 
 // 函数
@@ -59,13 +70,6 @@ void HKIT_Init(void (*err_handler)(HError err));
  * @param err 触发所传递的错误码
  */
 void HKIT_TriggerError(HError err);
-
-/**
- * 将错误代码转化为解释
- * @param err 错误代码
- * @return 存放错误信息的字符串
- */
-u8 *HKIT_ErrorToString(HError err);
 
 /**
  * 默认错误处理器，会将错误转为字符串后输出

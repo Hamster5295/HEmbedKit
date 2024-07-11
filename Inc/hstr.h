@@ -128,4 +128,13 @@ u8 *HSTR_I16ToString(i16 number);
  */
 u8 *HSTR_I32ToString(i32 number);
 
+#ifdef ENABLE_HDEBUG
+/**
+ * 将错误代码转化为解释
+ * @param err 错误代码
+ * @return 存放错误信息的字符串
+ */
+u8 *HSTR_ErrorToString(HError err);
+#endif
+
 #endif // __HSTR_H__

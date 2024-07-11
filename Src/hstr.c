@@ -146,3 +146,25 @@ u8 *HSTR_I32ToString(i32 number)
     }
     return str;
 }
+
+#ifdef ENABLE_HDEBUG
+u8 *HSTR_ErrorToString(HError err)
+{
+    switch (err) {
+        case HERROR_STR_Overflow:
+            return HSTR_New("String overflows. Define HSTR_BUFFER_SIZE as a larger value!");
+
+        case HERROR_DEBUG_Unavailable:
+            return HSTR_New("HDEBUG is not available.\r\nENABLE_HDEBUG is not defined, or HDEBUG_Init(huart) is not called in advance.");
+
+        case HERROR_WIFI_Unavailable:
+            return HSTR_New("HWiFi is not available.\r\nPlease call HWIFI_Init() in advance!");
+
+        case HERROR_WIFI_InitFailed:
+            return HSTR_New("HWiFi init failed. Response from module is not correct.");
+
+        default:
+            return HSTP_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
+    }
+}
+#endif

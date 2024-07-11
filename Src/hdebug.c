@@ -23,10 +23,15 @@ void __HDEBUG_Init(UART *huart)
     hdebug_port = huart;
 }
 
-void __HDEBUG_Print(u8 *str)
+void __HDEBUG_PrintSize(u8 *str, u16 size)
 {
     HDEBUG_ASSERT_INIT();
-    HAL_UART_Transmit(hdebug_port, str, HSTR_GetLen(str), HDEBUG_TIMEOUT);
+    HAL_UART_Transmit(hdebug_port, str, size, HDEBUG_TIMEOUT);
+}
+
+void __HDEBUG_Print(u8 *str)
+{
+    __HDEBUG_PrintSize(str, HSTR_GetLen(str));
 }
 
 void __HDEBUG_Println(u8 *str)
@@ -42,7 +47,7 @@ void __HDEBUG_PrintCRLF()
 
 void __HDEBUG_PrintError(HError code)
 {
-    __HDEBUG_Println(HKIT_ErrorToString(code));
+    __HDEBUG_Println(HSTR_ErrorToString(code));
 }
 
 #endif

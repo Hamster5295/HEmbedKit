@@ -36,37 +36,45 @@
  * 初始化，配置输出串口
  * @param huart 调试信息输出串口
  */
-#define HDebug_Init(huart) __HDEBUG_Init(huart)
+#define HDEBUG_Init(huart) __HDEBUG_Init(huart)
 
 /**
  * 不换行地输出字符串
  * @param str 要打印的字符串
  */
-#define HDebug_Print(str) __HDEBUG_Print(str)
+#define HDEBUG_Print(str) __HDEBUG_Print(str)
 
 /**
  * 输出一行字符串
  * @param str 要打印的字符串
  */
-#define HDebug_Println(str) __HDEBUG_Println(str)
+#define HDEBUG_Println(str) __HDEBUG_Println(str)
 
 /**
  * 输出换行符 \\r\\n
  */
-#define HDebug_PrintCRLF() __HDEBUG_PrintCRLF()
+#define HDEBUG_PrintCRLF()          __HDEBUG_PrintCRLF()
+
+/**
+ * 打印指定长度的字符串
+ * @param str 字符串首地址
+ * @param size 要打印的长度
+ */
+#define HDEBUG_PrintSize(str, size) __HDEBUG_PrintSize(str, size);
 
 /**
  * 输出错误信息
  * @param code 错误码
  */
-#define HDebug_PrintError(code) __HDEBUG_PrintError(code)
+#define HDEBUG_PrintError(code) __HDEBUG_PrintError(code)
 
 #else
-#define HDebug_Init(huart)       //
-#define HDebug_Print(str)        //
-#define HDDebug_Println(str)     //
-#define HDDebug_PrintCRLF(str)   //
-#define HDDebug_PrintError(code) //
+#define HDEBUG_Init(huart)       //
+#define HDEBUG_Print(str)        //
+#define HDEBUG_Println(str)     //
+#define HDEBUG_PrintCRLF(str)   //
+#define HDEBUG_PrintSize(str, size)   //
+#define HDEBUG_PrintError(code) //
 #endif
 
 // 函数
@@ -78,31 +86,42 @@ bool HDEBUG_IsAvailable();
 
 #ifdef ENABLE_HDEBUG
 /**
- * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
  * 初始化，配置输出串口
  * @param huart 调试信息输出串口
  */
 void __HDEBUG_Init(UART *huart);
 
 /**
- * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
  * 不换行地输出字符串
  * @param str 要打印的字符串
  */
 void __HDEBUG_Print(u8 *str);
 
 /**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
  * 输出一行字符串
  * @param str 要打印的字符串
  */
 void __HDEBUG_Println(u8 *str);
 
 /**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
  * 输出换行符 \\r\\n
  */
 void __HDEBUG_PrintCRLF();
 
 /**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
+ * 打印指定长度的字符串
+ * @param str 字符串首地址
+ * @param size 要打印的长度
+ */
+void __HDEBUG_PrintSize(u8 *str, u16 size);
+
+/**
+ * 这个函数不应当被直接调用！应当使用其宏形式，以便取消 Debug 时能完全从编译中去除。
  * 输出错误信息
  * @param code 错误码
  */
