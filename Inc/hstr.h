@@ -67,7 +67,7 @@ u8 *HSTR_Copy(u8 *dest, u8 *source);
  * @param right 右侧字符串
  * @return 连接后字符串首位置指针
  */
-u8 *HSTP_Concat(u8 *left, u8 *right);
+u8 *HSTR_Concat(u8 *left, u8 *right);
 
 /**
  * 比较两个字符串

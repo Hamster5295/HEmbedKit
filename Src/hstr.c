@@ -44,7 +44,7 @@ u8 *HSTR_Copy(u8 *dest, u8 *source)
     return dest;
 }
 
-u8 *HSTP_Concat(u8 *left, u8 *right)
+u8 *HSTR_Concat(u8 *left, u8 *right)
 {
     u16 len_left = HSTR_GetLen(left);
     u8 *str      = hstr_alloc(len_left + HSTR_GetLen(right));
@@ -164,7 +164,7 @@ u8 *HSTR_ErrorToString(HError err)
             return HSTR_New("HWiFi init failed. Response from module is not correct.");
 
         default:
-            return HSTP_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
+            return HSTR_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
     }
 }
 #endif
