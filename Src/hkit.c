@@ -18,7 +18,7 @@ void HKIT_DefaultErrorHandler(HError err)
 #ifdef ENABLE_HDEBUG
     if (HDEBUG_IsAvailable()) {
         HDEBUG_PrintCRLF();
-        HDEBUG_Println("!! Error !!");
+        HDEBUG_Println("[HKit] Error Occurs:");
         HDEBUG_PrintError(err);
         HDEBUG_PrintCRLF();
     }

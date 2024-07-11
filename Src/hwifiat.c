@@ -71,7 +71,7 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
     hwifi_buffer[size] = HSTR_END_MARK;
 
-    HDEBUG_Print("HWiFi: ");
+    HDEBUG_Print("[HWiFi] Recv: ");
     HDEBUG_PrintSize(hwifi_buffer, size);
 
     switch (hwifi_state & 0x00FF) {
