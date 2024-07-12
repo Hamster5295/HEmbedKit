@@ -5,11 +5,11 @@
 UART *hwifi_port = NULL;
 
 u8 hwifi_send_buffer[HWIFI_SEND_BUFFER_SIZE] = {0};
+u16 hwifi_send_len                           = 0;
 u8 hwifi_recv_buffer[HWIFI_RECV_BUFFER_SIZE] = {0};
+u16 hwifi_recv_len                           = 0;
 HWIFI_State hwifi_state                      = HWIFI_State_Idle;
 HWIFI_Context hwifi_ctx                      = HWIFI_Ctx_None;
-
-bool block_flag = false;
 
 void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL;
 
@@ -21,16 +21,15 @@ void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL
         }                                               \
     } while (0)
 
-#define HWIFI_ASSERT_IDLE()               \
-    do {                                  \
-        if (hwifi_state) return HAL_BUSY; \
+#define HWIFI_ASSERT_IDLE()                                  \
+    do {                                                     \
+        if (hwifi_state) HKIT_TriggerError(HERROR_WIFI_Busy) \
     } while (0)
 
 #define HWIFI_CLEAR_STATE()             \
     do {                                \
         hwifi_state = HWIFI_State_Idle; \
         hwifi_ctx &= 0xFF00;            \
-        block_flag = false;             \
     } while (0)
 
 #define HWIFI_CALL_END(ctx, state) \
@@ -125,11 +124,17 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWI
     HWIFI_CALL_END(HWIFI_Ctx_Init, HWIFI_State_Init);
 }
 
+bool HWIFI_IsIdle()
+{
+    return !hwifi_state;
+}
+
 void HWIFI_RxEventCallback(UART *uart, u16 size)
 {
     if (uart != hwifi_port) return;
     HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
 
+    hwifi_recv_len          = size;
     hwifi_recv_buffer[size] = HSTR_END_MARK;
 
     HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", hwifi_recv_buffer), size + 6);
@@ -162,6 +167,7 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
         case HWIFI_State_WaitForSend:
             if (*(hwifi_recv_buffer + size - 2) == '>') {
+                send(hwifi_send_buffer, hwifi_send_len);
             }
             break;
 
@@ -172,9 +178,6 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
                 case HWIFI_Ctx_ConnectToWiFi:
                     if (HSTR_Equal(hwifi_recv_buffer + size - 11, "CONNECTED\r\n", 11))
                         result_handler(ctx, HWIFI_CONNECTED, NULL);
-
-                    else if (HSTR_Equal(hwifi_recv_buffer + size - 8, "GOT IP\r\n", 8))
-                        result_handler(ctx, HWIFI_GETIP, NULL);
 
                     else if (HWIFI_RECV_WITH_OK(size)) {
                         result_handler(ctx, HWIFI_OK, NULL);
@@ -204,17 +207,14 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 STATUS HWIFI_Block(HWIFI_Context ctx)
 {
     ctx &= 0xFF;
-    u32 tick   = HAL_GetTick();
-    block_flag = true;
-    while (block_flag && ctx == (hwifi_ctx & 0xFF)) {
+    u32 tick = HAL_GetTick();
+    while (ctx == (hwifi_ctx & 0xFF)) {
         __nop();
-        if (HAL_GetTick() - tick > HWIFI_TIMEOUT_LEN) {
-            HDEBUG_Log("HWiFi", "Operation Timeout");
-            block_flag = false;
+        if (HAL_GetTick() - tick > HWIFI_BLOCK_TIMEOUT_LEN) {
+            HKIT_TriggerError(HERROR_WIFI_BlockTimeout);
             return HAL_TIMEOUT;
         }
     }
-    block_flag = false;
     return HAL_OK;
 }
 

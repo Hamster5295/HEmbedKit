@@ -15,6 +15,13 @@
 #define HWIFI_TIMEOUT_LEN 2000
 #endif
 
+#if !defined(HWIFI_BLOCK_TIMEOUT_LEN)
+/**
+ * 与 WiFi 外设通信的超时时限
+ */
+#define HWIFI_BLOCK_TIMEOUT_LEN 8000
+#endif
+
 #if !defined(HWIFI_RECV_BUFFER_SIZE)
 /**
  * 接收 WiFi 外设的缓冲区大小
@@ -56,7 +63,6 @@ typedef enum HWIFI_Code {
     HWIFI_TIMEOUT,
     HWIFI_CONNECTED,
     HWIFI_DISCONNECTED,
-    HWIFI_GETIP,
     HWIFI_CLOSED
 } HWIFI_Code;
 
@@ -67,13 +73,14 @@ typedef enum HWIFI_CWMode {
 } HWIFI_CWMode;
 
 typedef enum HWIFI_Encryption {
-    HWIFI_Enc_Open         = 0,
-    HWIFI_Enc_WPA_PSK      = 2,
-    HWIFI_Enc_WPA2_PSK     = 3,
-    HWIFI_Enc_WPA_WPA2_PSK = 34,
+    HWIFI_ENC_OPEN         = 0,
+    HWIFI_ENC_WPA_PSK      = 2,
+    HWIFI_ENC_WPA2_PSK     = 3,
+    HWIFI_ENC_WPA_WPA2_PSK = 34,
 } HWIFI_Encryption;
 
 // 宏
+
 
 // 函数
 /**
@@ -87,6 +94,12 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*result_handler)(HWIFI_Context ctx, 
  * 为注册的串口分配的事件回调
  */
 void HWIFI_RxEventCallback(UART *uart, u16 size);
+
+/**
+ * WiFi 模块当前是否空闲？
+ * @return 是否空闲
+ */
+bool HWIFI_IsIdle();
 
 /**
  * 阻塞等待某个 WiFi 操作执行完毕

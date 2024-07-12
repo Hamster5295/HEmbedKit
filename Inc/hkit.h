@@ -56,6 +56,16 @@ typedef enum {
      * 当 HWIFI 初始化时，未能获得 AT 响应触发
      */
     HERROR_WIFI_InitFailed = 0x31,
+
+    /**
+     * 当 WiFi 外设当前正在执行某个操作(等待操作指令的回复)，却仍尝试执行新操作时触发
+     */
+    HERROR_WIFI_Busy = 0x32,
+
+    /**
+     * 当阻塞操作 WIFI 时，响应超时触发
+     */
+    HERROR_WIFI_BlockTimeout = 0x33,
 } HError;
 
 // 函数
