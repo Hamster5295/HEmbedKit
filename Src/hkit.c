@@ -22,5 +22,9 @@ void HKIT_DefaultErrorHandler(HError err)
         HDEBUG_PrintError(err);
         HDEBUG_PrintCRLF();
     }
+
+    HDEBUG_Println("[HKit] Program Halted");
+    __disable_irq();
+    while (1) __nop();
 #endif
 }
