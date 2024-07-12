@@ -47,6 +47,14 @@
 u8 *HSTR_New(u8 *data);
 
 /**
+ * 从给定长度的数据新建字符串
+ * @param data 原字符串数据
+ * @param len 字符串长度
+ * @return 新字符串首位
+ */
+u8 *HSTR_NewSize(u8 *data, u16 len);
+
+/**
  * 获取指定字符串长度，不包含终止标志
  * @param str 要查询的字符串
  * @return 字符串长度
@@ -57,9 +65,18 @@ u16 HSTR_GetLen(u8 *str);
  * 将 source 字符串复制到 dest 中
  * @param source 要复制的字符串
  * @param dest 要粘贴的字符串
- * @return 原封不动的 dest 指针.
+ * @return 新字符串首位指针
  */
 u8 *HSTR_Copy(u8 *dest, u8 *source);
+
+/**
+ * 将 source 字符串的指定长度复制到 dest 中
+ * @param source 要复制的字符串
+ * @param dest 要粘贴的字符串
+ * @param u16 长度
+ * @return 新字符串首位指针
+ */
+u8 *HSTR_CopySize(u8 *dest, u8 *source, u16 len);
 
 /**
  * 将给定字符串连接到一起

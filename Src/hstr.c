@@ -3,6 +3,16 @@
 u8 hstr_buffer[HSTR_BUFFER_SIZE + 1]; // +1 是为了最后一个字符串的 \0 放得下
 u32 hstr_buffer_ptr = 0;
 
+#define HSTR_ASSERT_LEN(size)                                   \
+    do {                                                        \
+        if (size > HSTR_BUFFER_SIZE) {                          \
+            HDEBUG_Print("Required: ");                         \
+            HDEBUG_Println(HSTR_U16ToString(size));             \
+            HDEBUG_Print("Buffer: ");                           \
+            HDEBUG_Println(HSTR_U16ToString(HSTR_BUFFER_SIZE)); \
+            HKIT_TriggerError(HERROR_STR_Overflow);             \
+        }                                                       \
+    } while (0)
 /**
  * 从缓冲区分配 size 长度的空间并给出
  * @param size 需要分配的长度
@@ -10,7 +20,7 @@ u32 hstr_buffer_ptr = 0;
  */
 u8 *hstr_alloc(u16 size)
 {
-    HDEBUG_ASSERT_TRUE(size < HSTR_BUFFER_SIZE, HERROR_STR_Overflow);
+    HSTR_ASSERT_LEN(size);
     if (HSTR_BUFFER_SIZE - hstr_buffer_ptr < size) {
         hstr_buffer_ptr = size;
         return hstr_buffer;
@@ -23,7 +33,14 @@ u8 *hstr_alloc(u16 size)
 
 u8 *HSTR_New(u8 *data)
 {
-    return HSTR_Copy(hstr_alloc(HSTR_GetLen(data)), data);
+    return HSTR_NewSize(data, HSTR_GetLen(data));
+}
+
+u8 *HSTR_NewSize(u8 *data, u16 len)
+{
+    u8 *str      = HSTR_CopySize(hstr_alloc(len + 1), data, len);
+    *(str + len) = HSTR_END_MARK;
+    return str;
 }
 
 u16 HSTR_GetLen(u8 *str)
@@ -39,6 +56,16 @@ u8 *HSTR_Copy(u8 *dest, u8 *source)
     while (!HSTR_IS_END(source, idx)) {
         *(dest + idx) = *(source + idx);
         idx++;
+    }
+    *(dest + idx) = HSTR_END_MARK;
+    return dest;
+}
+
+u8 *HSTR_CopySize(u8 *dest, u8 *source, u16 len)
+{
+    u16 idx = 0;
+    for (; idx < len && *(source + idx) != HSTR_END_MARK; idx++) {
+        *(dest + idx) = *(source + idx);
     }
     *(dest + idx) = HSTR_END_MARK;
     return dest;
@@ -61,9 +88,8 @@ u8 HSTR_Compare(u8 *left, u8 *right)
             return HSTR_IS_END(right, ptr) ? 0 : 0xFF;
         } else if (HSTR_IS_END(right, ptr))
             return 1;
-        else if (*(left + ptr) == *(right + ptr))
-            return 0;
-        return *(left + ptr) > *(right + ptr) ? 1 : 0xFF;
+        else if (*(left + ptr) != *(right + ptr))
+            return *(left + ptr) > *(right + ptr) ? 1 : 0xFF;
         ptr++;
     }
 
@@ -166,8 +192,17 @@ u8 *HSTR_ErrorToString(HError err)
         case HERROR_WIFI_InitFailed:
             return HSTR_New("HWiFi init failed. Response from module is not correct.");
 
+        case HERROR_WIFI_Busy:
+            return HSTR_New("HWiFi is currently busy under another task!");
+
         case HERROR_WIFI_BlockTimeout:
             return HSTR_New("HWiFi blocked operation timeout.");
+
+        case HERROR_WIFI_RecvOverflow:
+            return HSTR_New("HWiFi recv buffer overflows. Define HWIFI_RECV_BUFFER_SIZE as a larger value!");
+
+        case HERROR_WIFI_SendOverflow:
+            return HSTR_New("HWiFi send buffer overflows. Define HWIFI_SEND_BUFFER_SIZE as a larger value!");
 
         default:
             return HSTR_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));

@@ -7,6 +7,8 @@
 
 #include "hkit.h"
 
+#pragma clang diagnostic ignore "-Wswitch"
+
 // 常量
 #if !defined(HWIFI_TIMEOUT_LEN)
 /**
@@ -33,7 +35,7 @@
 /**
  * 发送 WiFi 外设的缓冲区大小
  */
-#define HWIFI_SEND_BUFFER_SIZE 1024
+#define HWIFI_SEND_BUFFER_SIZE 2048
 #endif
 
 typedef enum HWIFI_State {
@@ -45,15 +47,20 @@ typedef enum HWIFI_State {
 } HWIFI_State;
 
 typedef enum HWIFI_Context {
-    HWIFI_Ctx_None          = 0x00,
-    HWIFI_Ctx_Init          = 0x01,
-    HWIFI_Ctx_SetCWMode     = 0x02,
-    HWIFI_Ctx_SetSoftAp     = 0x03,
-    HWIFI_Ctx_ConnectToWiFi = 0x04,
+    HWIFI_CTX_None           = 0x00,
+    HWIFI_CTX_Init           = 0x01,
+    HWIFI_CTX_SetCWMode      = 0x02,
+    HWIFI_CTX_SetSoftAp      = 0x03,
+    HWIFI_CTX_ConnectToWiFi  = 0x04,
+    HWIFI_CTX_ScanWiFi       = 0x05,
+    HWIFI_CTX_Send           = 0x06,
+    HWIFI_CTX_StartTCPServer = 0x09,
+    HWIFI_CTX_StopTCPServer  = 0x0A,
+    HWIFI_CTX_QueryIP        = 0x0B,
 
     // 掩码，可以与上面的共存
-    HWIFI_Ctx_AP     = 0x8000,
-    HWIFI_Ctx_SERVER = 0x4000
+    HWIFI_CTX_AP     = 0x8000,
+    HWIFI_CTX_SERVER = 0x4000
 } HWIFI_Context;
 
 typedef enum HWIFI_Code {
@@ -63,24 +70,24 @@ typedef enum HWIFI_Code {
     HWIFI_TIMEOUT,
     HWIFI_CONNECTED,
     HWIFI_DISCONNECTED,
+    HWIFI_GETIP,
     HWIFI_CLOSED
 } HWIFI_Code;
 
-typedef enum HWIFI_CWMode {
-    HWIFI_CWMODE_Station = 0x01,
-    HWIFI_CWMODE_SoftAP  = 0x02,
-    HWIFI_CWMODE_Both    = 0x03,
-} HWIFI_CWMode;
+typedef enum HWIFI_Mode {
+    HWIFI_MODE_Station = 0x01,
+    HWIFI_MODE_SoftAP  = 0x02,
+    HWIFI_MODE_Both    = 0x03,
+} HWIFI_Mode;
 
 typedef enum HWIFI_Encryption {
     HWIFI_ENC_OPEN         = 0,
     HWIFI_ENC_WPA_PSK      = 2,
     HWIFI_ENC_WPA2_PSK     = 3,
-    HWIFI_ENC_WPA_WPA2_PSK = 34,
+    HWIFI_ENC_WPA_WPA2_PSK = 4,
 } HWIFI_Encryption;
 
 // 宏
-
 
 // 函数
 /**
@@ -110,7 +117,7 @@ STATUS HWIFI_Block(HWIFI_Context ctx);
 /**
  * 设置 WiFi 模块连接的工作模式
  */
-HWIFI_Context HWIFI_SetCWMode(HWIFI_CWMode mode);
+HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode);
 
 /**
  * 配置软路由模式，即热点模式
@@ -119,7 +126,7 @@ HWIFI_Context HWIFI_SetCWMode(HWIFI_CWMode mode);
  * @param channel WiFi 信道
  * @param enc 加密方式，需要与密码配合
  */
-HWIFI_Context HWIFI_SetSoftAp(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc);
+HWIFI_Context HWIFI_SetAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc);
 
 /**
  * 连接到指定的 WiFi
@@ -133,5 +140,64 @@ HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd);
  * @param token 拼好的字符串, 格式是 "WiFi名称","WiFi密码"
  */
 HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token);
+
+/**
+ * 扫描周围 WiFi 并返回列表
+ */
+HWIFI_Context HWIFI_ScanWiFi();
+
+/**
+ * 启动 TCP 服务器
+ * @param port 端口, 0~65535 均可
+ */
+HWIFI_Context HWIFI_StartTCPServer(u16 port);
+
+/**
+ * 关闭 TCP 服务器
+ */
+HWIFI_Context HWIFI_StopTCPServer();
+
+/**
+ * 查询当前 IP 地址
+ */
+HWIFI_Context HWIFI_QueryIP();
+
+/**
+ * 发送指定长度数据
+ * @param str 数据首位置
+ * @param len 数据长度
+ */
+HWIFI_Context HWIFI_Send(u8 *str, u16 len);
+
+/**
+ * 发送一个字符串，直到遇到终止符。终止符也会被发送出去。
+ * @param str 字符串首位置
+ */
+HWIFI_Context HWIFI_SendStr(u8 *str);
+
+/**
+ * 将接收缓冲区的数据原封不动地发出去
+ */
+HWIFI_Context HWIFI_Xfer();
+
+/**
+ * 发送指定长度数据数据给指定连接
+ * @param client 连接的名称，通常是从 0 开始计的数字
+ * @param str 发送的数据
+ * @param len 数据长度
+ */
+HWIFI_Context HWIFI_SendClient(u8 client, u8 *str, u16 len);
+
+/**
+ * 发送字符串给指定连接，直到遇到终止符。终止符也会被发送出去。
+ * @param client 连接的名称，通常是从 0 开始计的数字
+ * @param str 发送的数据
+ */
+HWIFI_Context HWIFI_SendClientStr(u8 client, u8 *str);
+
+/**
+ * 将接收缓冲区的数据原封不动地发给指定连接
+ */
+HWIFI_Context HWIFI_XferClient(u8 client);
 
 #endif // __HWIFIAT_H__

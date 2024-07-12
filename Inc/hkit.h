@@ -4,7 +4,10 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-// Data Types
+// 禁用 C23 标准警告
+#pragma clang diagnostic ignored "-Wc23-extensions"
+
+// 基本数据类型
 #define u8    uint8_t
 #define u16   uint16_t
 #define u32   uint32_t
@@ -66,6 +69,16 @@ typedef enum {
      * 当阻塞操作 WIFI 时，响应超时触发
      */
     HERROR_WIFI_BlockTimeout = 0x33,
+
+    /**
+     * 当接收缓冲区溢出时触发
+     */
+    HERROR_WIFI_RecvOverflow = 0x34,
+
+    /**
+     * 当发送缓冲区溢出时触发
+     */
+    HERROR_WIFI_SendOverflow = 0x35,
 } HError;
 
 // 函数
