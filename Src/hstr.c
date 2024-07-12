@@ -101,11 +101,12 @@ u8 *HSTR_U32ToString(u32 number)
     }
 
     u8 len  = i + 1;
-    u8 *str = hstr_alloc(len);
+    u8 *str = hstr_alloc(len + 1);
 
     for (u8 j = 0; j < len; (j++, i--)) {
         *(str + j) = *(buffer + i);
     }
+    *(str + len) = HSTR_END_MARK;
     return str;
 }
 
@@ -140,11 +141,12 @@ u8 *HSTR_I32ToString(i32 number)
         i++;
     }
 
-    u8 *str = hstr_alloc(len);
+    u8 *str = hstr_alloc(len + 1);
 
     for (u8 j = 0; j < len; (j++, i--)) {
         *(str + j) = *(buffer + i);
     }
+    *(str + len) = HSTR_END_MARK;
     return str;
 }
 
@@ -163,6 +165,9 @@ u8 *HSTR_ErrorToString(HError err)
 
         case HERROR_WIFI_InitFailed:
             return HSTR_New("HWiFi init failed. Response from module is not correct.");
+
+        case HERROR_WIFI_BlockTimeout:
+            return HSTR_New("HWiFi blocked operation timeout.");
 
         default:
             return HSTR_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
