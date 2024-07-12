@@ -75,7 +75,6 @@
  */
 #define HDEBUG_Log(module, msg) \
     do {                        \
-        HDEBUG_PrintCRLF();     \
         HDEBUG_Print("[");      \
         HDEBUG_Print(module);   \
         HDEBUG_Print("] ");     \
@@ -91,7 +90,6 @@
  */
 #define HDEBUG_LogSize(module, msg, len) \
     do {                                 \
-        HDEBUG_PrintCRLF();              \
         HDEBUG_Print("[");               \
         HDEBUG_Print(module);            \
         HDEBUG_Print("] ");              \
