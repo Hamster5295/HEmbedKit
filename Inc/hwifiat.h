@@ -7,7 +7,7 @@
 
 #include "hkit.h"
 
-#pragma clang diagnostic ignore "-Wswitch"
+#pragma clang diagnostic ignored "-Wswitch"
 
 // 常量
 #if !defined(HWIFI_TIMEOUT_LEN)
@@ -47,31 +47,35 @@ typedef enum HWIFI_State {
 } HWIFI_State;
 
 typedef enum HWIFI_Context {
-    HWIFI_CTX_None           = 0x00,
-    HWIFI_CTX_Init           = 0x01,
-    HWIFI_CTX_SetCWMode      = 0x02,
-    HWIFI_CTX_SetSoftAp      = 0x03,
-    HWIFI_CTX_ConnectToWiFi  = 0x04,
-    HWIFI_CTX_ScanWiFi       = 0x05,
-    HWIFI_CTX_Send           = 0x06,
-    HWIFI_CTX_StartTCPServer = 0x09,
-    HWIFI_CTX_StopTCPServer  = 0x0A,
-    HWIFI_CTX_QueryIP        = 0x0B,
+    HWIFI_CTX_None               = 0x00,
+    HWIFI_CTX_Init               = 0x01,
+    HWIFI_CTX_SetCWMode          = 0x02,
+    HWIFI_CTX_SetSoftAp          = 0x03,
+    HWIFI_CTX_ConnectToWiFi      = 0x04,
+    HWIFI_CTX_ScanWiFi           = 0x05,
+    HWIFI_CTX_Send               = 0x06,
+    HWIFI_CTX_StartTCPServer     = 0x09,
+    HWIFI_CTX_StopTCPServer      = 0x0A,
+    HWIFI_CTX_QueryIP            = 0x0B,
+    HWIFI_CTX_StartTCPConnection = 0x0C,
+    HWIFI_CTX_StopTCPConnection  = 0x0D,
 
     // 掩码，可以与上面的共存
     HWIFI_CTX_AP     = 0x8000,
-    HWIFI_CTX_SERVER = 0x4000
+    HWIFI_CTX_SERVER = 0x4000,
+    HWIFI_CTX_CLIENT = 0x2000
 } HWIFI_Context;
 
 typedef enum HWIFI_Code {
-    HWIFI_OK,
-    HWIFI_ERROR,
-    HWIFI_FAILED,
-    HWIFI_TIMEOUT,
-    HWIFI_CONNECTED,
-    HWIFI_DISCONNECTED,
-    HWIFI_GETIP,
-    HWIFI_CLOSED
+    HWIFI_OK           = 0x00,
+    HWIFI_ERROR        = 0x01,
+    HWIFI_FAILED       = 0x02,
+    HWIFI_TIMEOUT      = 0x03,
+    HWIFI_CONNECTED    = 0x04,
+    HWIFI_DISCONNECTED = 0x05,
+    HWIFI_GETIP        = 0x06,
+    HWIFI_CLOSED       = 0x07,
+    HWIFI_RECV         = 0x08
 } HWIFI_Code;
 
 typedef enum HWIFI_Mode {
@@ -156,6 +160,18 @@ HWIFI_Context HWIFI_StartTCPServer(u16 port);
  * 关闭 TCP 服务器
  */
 HWIFI_Context HWIFI_StopTCPServer();
+
+/**
+ * 通过指定地址和端口建立TCP连接
+ * @param ip IP地址首位
+ * @param port 端口号
+ */
+HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u8 port);
+
+/**
+ * 关闭 TCP 连接
+ */
+HWIFI_Context HWIFI_StopTCPConnection();
 
 /**
  * 查询当前 IP 地址

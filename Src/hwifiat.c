@@ -16,18 +16,19 @@ u32 hwifi_block_tick    = 0;
 
 void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL;
 
-#define HWIFI_ASSERT_INIT()                             \
-    do {                                                \
-        if (hwifi_port == NULL) {                       \
-            HKIT_TriggerError(HERROR_WIFI_Unavailable); \
-            return HAL_ERROR;                           \
-        }                                               \
+#define HWIFI_ASSERT_INIT()                                                 \
+    do {                                                                    \
+        if (hwifi_port == NULL) HKIT_TriggerError(HERROR_WIFI_Unavailable); \
     } while (0)
 
 #define HWIFI_ASSERT_IDLE()                                   \
     do {                                                      \
         if (hwifi_state) HKIT_TriggerError(HERROR_WIFI_Busy); \
     } while (0)
+
+#define HWIFI_ASSERT()   \
+    HWIFI_ASSERT_INIT(); \
+    HWIFI_ASSERT_IDLE();
 
 #define HWIFI_ASSERT_RECV_LEN(size)                                                     \
     do {                                                                                \
@@ -74,7 +75,6 @@ void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL
  */
 STATUS send(u8 *pdata, u16 len)
 {
-    HWIFI_ASSERT_INIT();
     HDEBUG_PrintSize(pdata, len);
     return HAL_UART_Transmit(hwifi_port, pdata, len, HWIFI_TIMEOUT_LEN);
 }
@@ -161,10 +161,10 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
     hwifi_block_tick = 0;
 
-    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", hwifi_recv_buffer), size + 6);
-
     HWIFI_Context ctx      = hwifi_ctx & 0x00FF;
     HWIFI_Context ctx_long = hwifi_ctx & 0xFF00;
+
+    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", hwifi_recv_buffer), size + 6);
 
     switch (hwifi_state) {
 
@@ -229,17 +229,21 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
             break;
 
         case HWIFI_State_WaitForSend:
-            if (*(hwifi_recv_buffer + size - 2) == '>' || *(hwifi_recv_buffer + size - 3) == '>') {
+            // 检查是否准备好发送了
+            if (*(hwifi_recv_buffer + size - 1) == '>' || *(hwifi_recv_buffer + size - 2) == '>') {
+                HDEBUG_Println("> Check Passed!");
+                // 发送内容
                 switch (ctx) {
                     case HWIFI_CTX_Send:
                         HDEBUG_Println(HSTR_U16ToString(hwifi_send_len));
                         send(hwifi_send_buffer, hwifi_send_len);
                         break;
                 }
-                HDEBUG_Println(HSTR_U16ToString(ctx));
             } else if (HWIFI_RECV_WITH_OK(size)) {
+                // 发送成功 SEND OK
                 HWIFI_HandleResult(ctx, HWIFI_OK, NULL);
             } else if (HWIFI_RECV_WITH_ERROR(size)) {
+                // 发送失败
                 HWIFI_HandleResult(ctx, HWIFI_ERROR, NULL);
             }
             break;
@@ -276,28 +280,40 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
             break;
     }
 
-    switch (ctx_long) {
-        case HWIFI_CTX_SERVER:
-            if (HSTR_Equal(hwifi_recv_buffer + size - 9, "CONNECT", 7)) {
-                u8 ptr = 1;
-                while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
-                result_handler(ctx_long, HWIFI_CONNECTED, HSTR_NewSize(hwifi_recv_buffer, ptr));
+    if (ctx_long & HWIFI_CTX_SERVER) {
+        if (HSTR_Equal(hwifi_recv_buffer + size - 9, "CONNECT", 7)) {
+            u8 ptr = 1;
+            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
+            result_handler(HWIFI_CTX_SERVER, HWIFI_CONNECTED, HSTR_NewSize(hwifi_recv_buffer, ptr));
 
-            } else if (HSTR_Equal(hwifi_recv_buffer + size - 8, "CLOSED", 6)) {
-                u8 ptr = 1;
-                while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
-                result_handler(ctx_long, HWIFI_CLOSED, HSTR_NewSize(hwifi_recv_buffer, ptr));
+        } else if (HSTR_Equal(hwifi_recv_buffer + size - 8, "CLOSED", 6)) {
+            u8 ptr = 1;
+            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
+            result_handler(HWIFI_CTX_SERVER, HWIFI_CLOSED, HSTR_NewSize(hwifi_recv_buffer, ptr));
 
-            } else if (HSTR_Equal(hwifi_recv_buffer + 2, "+IPD", 4)) {
-                u8 lptr = 8;
-                while (*(hwifi_recv_buffer + lptr) != ':') lptr++;
-                u8 rptr = (++lptr) + 1;
-                result_handler(ctx_long, hwifi_recv_buffer[7], HSTR_NewSize(hwifi_recv_buffer + lptr, size - lptr));
-            }
-            break;
+        } else if (HSTR_Equal(hwifi_recv_buffer + 2, "+IPD", 4)) {
+            u8 lptr = 8;
+            while (*(hwifi_recv_buffer + lptr) != ':') lptr++;
+            lptr++;
 
-        default:
-            break;
+            u8 temp[2];
+            temp[0] = hwifi_recv_buffer[7];
+            temp[1] = '\0';
+            result_handler(HWIFI_CTX_SERVER, HWIFI_RECV, HSTR_Concat(temp, HSTR_NewSize(hwifi_recv_buffer + lptr, size - lptr)));
+        }
+    }
+
+    if (ctx_long & HWIFI_CTX_CLIENT) {
+        if (HSTR_Equal(hwifi_recv_buffer + size - 8, "CLOSED", 6)) {
+            hwifi_ctx &= ~HWIFI_CTX_CLIENT;
+            result_handler(HWIFI_CTX_CLIENT, HWIFI_CLOSED, NULL);
+
+        } else if (HSTR_Equal(hwifi_recv_buffer + 2, "+IPD", 4)) {
+            u8 lptr = 5;
+            while (*(hwifi_recv_buffer + lptr) != ':') lptr++;
+            lptr++;
+            result_handler(HWIFI_CTX_CLIENT, HWIFI_RECV, HSTR_NewSize(hwifi_recv_buffer + lptr, size - lptr));
+        }
     }
 
     HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
@@ -319,7 +335,7 @@ STATUS HWIFI_Block(HWIFI_Context ctx)
 
 HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
     send_str("AT+CWMODE=");
     send_str(HSTR_U8ToString(mode));
     send_crlf();
@@ -334,7 +350,7 @@ HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode)
 
 HWIFI_Context HWIFI_SetAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
     send_str("AT+CWSAP=\"");
     send_str(ssid);
     send("\",\"", 3);
@@ -349,7 +365,7 @@ HWIFI_Context HWIFI_SetAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encrypt
 
 HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
     send_str("AT+CWJAP=\"");
     send_str(ssid);
     send("\",\"", 3);
@@ -360,7 +376,7 @@ HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd)
 
 HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
     send_str("AT+CWJAP=\"");
     send_str(token);
     send_crlf();
@@ -369,35 +385,57 @@ HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token)
 
 HWIFI_Context HWIFI_ScanWiFi()
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
     send_str("AT+CWLAP\r\n");
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_ScanWiFi);
 }
 
 HWIFI_Context HWIFI_StartTCPServer(u16 port)
 {
-    HWIFI_ASSERT_IDLE();
-
+    HWIFI_ASSERT();
     HSTR_Copy(hwifi_send_buffer, HSTR_U16ToString(port));
 
     send_str("AT+CIPMUX=1\r\n");
-
     hwifi_ctx |= HWIFI_CTX_SERVER;
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StartTCPServer);
 }
 
 HWIFI_Context HWIFI_StopTCPServer()
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
 
     send_str("AT+CIPSERVER=0\r\n");
     hwifi_ctx &= ~HWIFI_CTX_SERVER;
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopTCPServer);
 }
 
+HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u8 port)
+{
+    HWIFI_ASSERT();
+
+    send_str("AT+CIPSTART=\"TCP\",\"");
+    send_str(ip);
+    send("\",", 2);
+    send_str(HSTR_U8ToString(port));
+    send_crlf();
+
+    hwifi_ctx |= HWIFI_CTX_CLIENT;
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StartTCPConnection);
+}
+
+HWIFI_Context HWIFI_StopTCPConnection()
+{
+    HWIFI_ASSERT();
+
+    send_str("AT+CIPCLOSE\r\n");
+
+    hwifi_ctx &= ~HWIFI_CTX_CLIENT;
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopTCPConnection);
+}
+
 HWIFI_Context HWIFI_QueryIP()
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
 
     send_str("AT+CIPSTA?\r\n");
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_QueryIP);
@@ -405,7 +443,7 @@ HWIFI_Context HWIFI_QueryIP()
 
 HWIFI_Context HWIFI_Send(u8 *str, u16 len)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
 
     HWIFI_ASSERT_SEND_LEN(len);
     HSTR_CopySize(hwifi_send_buffer, str, len);
@@ -429,7 +467,7 @@ HWIFI_Context HWIFI_Xfer()
 
 HWIFI_Context HWIFI_SendClient(u8 client, u8 *str, u16 len)
 {
-    HWIFI_ASSERT_IDLE();
+    HWIFI_ASSERT();
 
     HWIFI_ASSERT_SEND_LEN(len);
     HSTR_CopySize(hwifi_send_buffer, str, len);
