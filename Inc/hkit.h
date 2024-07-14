@@ -2,6 +2,7 @@
 #define __HKIT_H__
 
 #include <stdint.h>
+#include <stdarg.h>
 
 // 禁用 C23 标准警告
 #pragma clang diagnostic ignored "-Wc23-extensions"

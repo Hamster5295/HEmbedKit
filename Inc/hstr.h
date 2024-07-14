@@ -87,6 +87,13 @@ u8 *HSTR_CopySize(u8 *dest, u8 *source, u16 len);
 u8 *HSTR_Concat(u8 *left, u8 *right);
 
 /**
+ * 将多个给定字符串连接到一起
+ * @param count 字符串数量
+ * @param ... 字符串, u8* 类型
+ */
+u8 *HSTR_Concats(u16 count, ...);
+
+/**
  * 比较两个字符串
  * @param left 左侧
  * @param right 右侧
