@@ -6,15 +6,33 @@ UART *hwifi_port = NULL;
 
 u8 hwifi_send_buffer[HWIFI_SEND_BUFFER_SIZE] = {0};
 u16 hwifi_send_len                           = 0;
-u8 hwifi_recv_buffer[HWIFI_RECV_BUFFER_SIZE] = {0};
-u16 hwifi_recv_len                           = 0;
+
+// 双缓冲
+u8 hwifi_recv_buffer1[HWIFI_RECV_BUFFER_SIZE] = {0};
+u8 hwifi_recv_buffer2[HWIFI_RECV_BUFFER_SIZE] = {0};
+u16 hwifi_recv_len1                           = 0;
+u16 hwifi_recv_len2                           = 0;
+
+u8 *hwifi_recv_buffer = hwifi_recv_buffer1;
+u16 *hwifi_recv_len   = &hwifi_recv_len1;
+
+typedef struct HWIFI_State_Flags {
+    u8 reserved : 7;
+    u8 buffer : 1;
+} HWIFI_State_Flags;
+
+HWIFI_State_Flags flags;
 
 HWIFI_State hwifi_state = HWIFI_State_Idle;
 HWIFI_Context hwifi_ctx = HWIFI_CTX_None;
+
 u8 hwifi_internal_state = 0;
 u32 hwifi_block_tick    = 0;
 
 void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL;
+
+void (*hwifi_handle_queue[3])();
+u8 hwifi_handle_queue_head = 0, hwifi_handle_queue_tail = 0;
 
 #define HWIFI_ASSERT_INIT()                                                 \
     do {                                                                    \
@@ -63,10 +81,10 @@ void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content) = NULL
     HWIFI_CALL_END(ctx, HWIFI_State_WaitForResponse)
 
 #define HWIFI_RECV_WITH_OK(size) \
-    (HSTR_Equal(hwifi_recv_buffer + size - 4, "OK\r\n", 4))
+    (HSTR_Equal(buf + size - 4, "OK\r\n", 4))
 
 #define HWIFI_RECV_WITH_ERROR(size) \
-    (HSTR_Equal(hwifi_recv_buffer + size - 7, "ERROR\r\n", 7))
+    (HSTR_Equal(buf + size - 7, "ERROR\r\n", 7))
 
 /**
  * 发送指定长度的数据
@@ -132,49 +150,21 @@ STATUS send_quot()
     return send("\"", 1);
 }
 
-HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content))
+void handle_recv(u8 *buf, u16 size)
 {
-    hwifi_port     = huart;
-    result_handler = res_handler;
-    if (huart != NULL) {
-        HAL_UART_RegisterRxEventCallback(huart, HWIFI_RxEventCallback);
-        HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
-        send_str("ATE0\r\n");
-    }
-
-    HWIFI_CALL_END(HWIFI_CTX_Init, HWIFI_State_Init);
-}
-
-bool HWIFI_IsIdle()
-{
-    return !hwifi_state;
-}
-
-void HWIFI_RxEventCallback(UART *uart, u16 size)
-{
-    if (uart != hwifi_port) return;
-
-    HWIFI_ASSERT_RECV_LEN(size);
-
-    hwifi_recv_len          = size;
-    hwifi_recv_buffer[size] = HSTR_END_MARK;
-
-    hwifi_block_tick = 0;
-
+    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", buf), size + 6);
     HWIFI_Context ctx      = hwifi_ctx & 0x00FF;
     HWIFI_Context ctx_long = hwifi_ctx & 0xFF00;
-
-    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", hwifi_recv_buffer), size + 6);
 
     switch (hwifi_state) {
 
         case HWIFI_State_Init:
-            if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(hwifi_recv_buffer + size - 6, "ATE0\r\n", 6)) {
+            if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(buf + size - 6, "ATE0\r\n", 6)) {
                 HDEBUG_Log("HWiFi", "Initialized");
-                HWIFI_HandleResult(ctx, HWIFI_OK, hwifi_recv_buffer);
+                HWIFI_HandleResult(ctx, HWIFI_OK, buf);
             } else {
                 HKIT_TriggerError(HERROR_WIFI_InitFailed);
-                HWIFI_HandleResult(ctx, HWIFI_ERROR, hwifi_recv_buffer);
+                HWIFI_HandleResult(ctx, HWIFI_ERROR, buf);
             }
             break;
 
@@ -212,10 +202,10 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
                     case HWIFI_CTX_QueryIP:
                         u8 lptr = 10;
-                        while (*(hwifi_recv_buffer + lptr) != '"') lptr++;
+                        while (*(buf + lptr) != '"') lptr++;
                         u8 rptr = (++lptr) + 1;
-                        while (*(hwifi_recv_buffer + rptr) != '"') rptr++;
-                        HWIFI_HandleResult(ctx, HWIFI_OK, HSTR_NewSize(hwifi_recv_buffer + lptr, rptr - lptr));
+                        while (*(buf + rptr) != '"') rptr++;
+                        HWIFI_HandleResult(ctx, HWIFI_OK, HSTR_NewSize(buf + lptr, rptr - lptr));
                         break;
 
                     default:
@@ -230,12 +220,10 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
         case HWIFI_State_WaitForSend:
             // 检查是否准备好发送了
-            if (*(hwifi_recv_buffer + size - 1) == '>' || *(hwifi_recv_buffer + size - 2) == '>') {
-                HDEBUG_Println("> Check Passed!");
+            if (*(buf + size - 1) == '>' || *(buf + size - 2) == '>') {
                 // 发送内容
                 switch (ctx) {
                     case HWIFI_CTX_Send:
-                        HDEBUG_Println(HSTR_U16ToString(hwifi_send_len));
                         send(hwifi_send_buffer, hwifi_send_len);
                         break;
                 }
@@ -252,10 +240,10 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
             switch (ctx) {
 
                 case HWIFI_CTX_ConnectToWiFi:
-                    if (HSTR_Equal(hwifi_recv_buffer + size - 11, "CONNECTED\r\n", 11))
-                        result_handler(ctx, HWIFI_CONNECTED, NULL);
+                    if (HSTR_Equal(buf + size - 11, "CONNECTED\r\n", 11))
+                        result_handler(ctx, HWIFI_CONNECT, NULL);
 
-                    else if (HSTR_Equal(hwifi_recv_buffer + size - 8, "GOT IP\r\n", 8))
+                    else if (HSTR_Equal(buf + size - 8, "GOT IP\r\n", 8))
                         result_handler(ctx, HWIFI_GETIP, NULL);
 
                     else if (HWIFI_RECV_WITH_OK(size)) {
@@ -263,8 +251,8 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
                     }
 
-                    else if (HSTR_Equal(hwifi_recv_buffer, "+CWJAP:", 7))
-                        result_handler(ctx, HWIFI_FAILED, hwifi_recv_buffer + 7);
+                    else if (HSTR_Equal(buf, "+CWJAP:", 7))
+                        result_handler(ctx, HWIFI_FAILED, buf + 7);
 
                     else if (HWIFI_RECV_WITH_ERROR(size)) {
                         HWIFI_HandleResult(ctx, HWIFI_ERROR, NULL);
@@ -281,51 +269,117 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
     }
 
     if (ctx_long & HWIFI_CTX_SERVER) {
-        if (HSTR_Equal(hwifi_recv_buffer + size - 9, "CONNECT", 7)) {
+        if (HSTR_Equal(buf + size - 9, "CONNECT", 7)) {
             u8 ptr = 1;
-            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
-            result_handler(HWIFI_CTX_SERVER, HWIFI_CONNECTED, HSTR_NewSize(hwifi_recv_buffer, ptr));
+            while (*(buf + ptr) != ',') ptr++;
+            result_handler(HWIFI_CTX_SERVER, HWIFI_CONNECT, HSTR_NewSize(buf, ptr));
 
-        } else if (HSTR_Equal(hwifi_recv_buffer + size - 8, "CLOSED", 6)) {
+        } else if (HSTR_Equal(buf + size - 8, "CLOSED", 6)) {
             u8 ptr = 1;
-            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
-            result_handler(HWIFI_CTX_SERVER, HWIFI_CLOSED, HSTR_NewSize(hwifi_recv_buffer, ptr));
+            while (*(buf + ptr) != ',') ptr++;
+            result_handler(HWIFI_CTX_SERVER, HWIFI_CLOSED, HSTR_NewSize(buf, ptr));
 
-        } else if (HSTR_Equal(hwifi_recv_buffer + 2, "+IPD", 4)) {
+        } else if (HSTR_Equal(buf + 2, "+IPD", 4)) {
             u8 lptr = 8;
-            while (*(hwifi_recv_buffer + lptr) != ':') lptr++;
+            while (*(buf + lptr) != ':') lptr++;
             lptr++;
 
             u8 temp[2];
-            temp[0] = hwifi_recv_buffer[7];
+            temp[0] = buf[7];
             temp[1] = '\0';
-            result_handler(HWIFI_CTX_SERVER, HWIFI_RECV, HSTR_Concat(temp, HSTR_NewSize(hwifi_recv_buffer + lptr, size - lptr)));
+            result_handler(HWIFI_CTX_SERVER, HWIFI_RECV, HSTR_Concat(temp, HSTR_NewSize(buf + lptr, size - lptr)));
         }
     }
 
     if (ctx_long & HWIFI_CTX_CLIENT) {
-        if (HSTR_Equal(hwifi_recv_buffer + size - 8, "CLOSED", 6)) {
+        if (HSTR_Equal(buf + size - 8, "CLOSED", 6)) {
             hwifi_ctx &= ~HWIFI_CTX_CLIENT;
             result_handler(HWIFI_CTX_CLIENT, HWIFI_CLOSED, NULL);
 
-        } else if (HSTR_Equal(hwifi_recv_buffer + 2, "+IPD", 4)) {
+        } else if (HSTR_Equal(buf + 2, "+IPD", 4)) {
             u8 lptr = 5;
-            while (*(hwifi_recv_buffer + lptr) != ':') lptr++;
+            while (*(buf + lptr) != ':') lptr++;
             lptr++;
-            result_handler(HWIFI_CTX_CLIENT, HWIFI_RECV, HSTR_NewSize(hwifi_recv_buffer + lptr, size - lptr));
+            result_handler(HWIFI_CTX_CLIENT, HWIFI_RECV, HSTR_NewSize(buf + lptr, size - lptr));
         }
     }
 
     if (ctx_long & HWIFI_CTX_AP) {
-        if (HSTR_Equal(hwifi_recv_buffer, "+STA_CONNECTED: ", 16)) {
-            result_handler(HWIFI_CTX_AP, HWIFI_CONNECTED, HSTR_New(hwifi_recv_buffer + 16));
-        } else if (HSTR_Equal(hwifi_recv_buffer, "+DIST_STA_IP: ", 14)) {
-            u8 ptr = 31; // 31 = 14(前缀长度) + 17(MAC地址长度), 理论上正好是逗号的位置，但谨慎起见还是加一下看看
-            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
-            result_handler(HWIFI_CTX_AP, HWIFI_GETIP, HSTR_NewSize(hwifi_recv_buffer, ptr, size - ptr));
+        if (HSTR_Equal(buf, "+STA_CONNECTED:\"", 16)) {
+            result_handler(HWIFI_CTX_AP, HWIFI_CONNECT, HSTR_NewSize(buf + 16, size - 19)); // 19 是 16 + 末尾的 "\"\r\n"
+        } else if (HSTR_Equal(buf, "+DIST_STA_IP:\"", 14)) {
+            u8 ptr = 34; // 34 = 14(前缀长度) + 17(MAC地址长度) + 3(引号与逗号), 理论上正好是ip首位
+            result_handler(HWIFI_CTX_AP, HWIFI_GETIP, HSTR_NewSize(buf + ptr, size - ptr - 3));
         }
     }
+}
 
+void handle_recv1()
+{
+    handle_recv(hwifi_recv_buffer1, hwifi_recv_len1);
+}
+
+void handle_recv2()
+{
+    handle_recv(hwifi_recv_buffer2, hwifi_recv_len2);
+}
+
+HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content))
+{
+    hwifi_port     = huart;
+    result_handler = res_handler;
+    if (huart != NULL) {
+        HAL_UART_RegisterRxEventCallback(huart, HWIFI_RxEventCallback);
+        HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
+        send_str("ATE0\r\n");
+    }
+
+    HWIFI_CALL_END(HWIFI_CTX_Init, HWIFI_State_Init);
+}
+
+void HWIFI_Update()
+{
+    while (hwifi_handle_queue_tail != hwifi_handle_queue_head) {
+        __nop();
+        if (hwifi_handle_queue[hwifi_handle_queue_tail] != NULL) {
+            hwifi_handle_queue[hwifi_handle_queue_tail]();
+        }
+        hwifi_handle_queue_tail++;
+        if (hwifi_handle_queue_tail >= 3) hwifi_handle_queue_tail = 0;
+    }
+}
+
+bool HWIFI_IsIdle()
+{
+    return !hwifi_state;
+}
+
+void HWIFI_RxEventCallback(UART *uart, u16 size)
+{
+    if (uart != hwifi_port) return;
+
+    HWIFI_ASSERT_RECV_LEN(size);
+
+    *hwifi_recv_len         = size;
+    hwifi_recv_buffer[size] = HSTR_END_MARK;
+    hwifi_block_tick        = 0;
+
+    // 切换缓冲区
+    if (flags.buffer) {
+        hwifi_handle_queue[hwifi_handle_queue_head++] = handle_recv2;
+        if (hwifi_handle_queue_head >= 3) hwifi_handle_queue_head = 0;
+
+        hwifi_recv_buffer = hwifi_recv_buffer1;
+        hwifi_recv_len    = &hwifi_recv_len1;
+        flags.buffer      = false;
+    } else {
+        hwifi_handle_queue[hwifi_handle_queue_head++] = handle_recv1;
+        if (hwifi_handle_queue_head >= 3) hwifi_handle_queue_head = 0;
+
+        hwifi_recv_buffer = hwifi_recv_buffer2;
+        hwifi_recv_len    = &hwifi_recv_len2;
+        flags.buffer      = true;
+    }
     HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
 }
 
@@ -334,7 +388,7 @@ STATUS HWIFI_Block(HWIFI_Context ctx)
     ctx &= 0xFF;
     hwifi_block_tick = HAL_GetTick();
     while (ctx == (hwifi_ctx & 0xFF)) {
-        __nop();
+        HWIFI_Update();
         if (HAL_GetTick() - hwifi_block_tick > HWIFI_BLOCK_TIMEOUT_LEN) {
             HKIT_TriggerError(HERROR_WIFI_BlockTimeout);
             return HAL_TIMEOUT;
@@ -358,7 +412,7 @@ HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode)
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_SetCWMode);
 }
 
-HWIFI_Context HWIFI_SetAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc)
+HWIFI_Context HWIFI_SetSoftAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc)
 {
     HWIFI_ASSERT();
     send_str("AT+CWSAP=\"");
@@ -387,7 +441,7 @@ HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd)
 HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token)
 {
     HWIFI_ASSERT();
-    send_str("AT+CWJAP=\"");
+    send_str("AT+CWJAP=");
     send_str(token);
     send_crlf();
     HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWiFi);
@@ -419,14 +473,14 @@ HWIFI_Context HWIFI_StopTCPServer()
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopTCPServer);
 }
 
-HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u8 port)
+HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u16 port)
 {
     HWIFI_ASSERT();
 
     send_str("AT+CIPSTART=\"TCP\",\"");
     send_str(ip);
     send("\",", 2);
-    send_str(HSTR_U8ToString(port));
+    send_str(HSTR_U16ToString(port));
     send_crlf();
 
     hwifi_ctx |= HWIFI_CTX_CLIENT;
@@ -472,7 +526,8 @@ HWIFI_Context HWIFI_SendStr(u8 *str)
 
 HWIFI_Context HWIFI_Xfer()
 {
-    return HWIFI_Send(hwifi_recv_buffer, hwifi_recv_len);
+    // 由于已经切换过了，所以需要与 flag 反着来
+    return flags.buffer ? HWIFI_Send(hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_Send(hwifi_recv_buffer2, hwifi_recv_len2);
 }
 
 HWIFI_Context HWIFI_SendClient(u8 client, u8 *str, u16 len)
@@ -498,5 +553,6 @@ HWIFI_Context HWIFI_SendClientStr(u8 client, u8 *str)
 
 HWIFI_Context HWIFI_XferClient(u8 client)
 {
-    return HWIFI_SendClient(client, hwifi_recv_buffer, hwifi_recv_len);
+    // 由于已经切换过了，所以需要与 flag 反着来
+    return flags.buffer ? HWIFI_SendClient(client, hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_SendClient(client, hwifi_recv_buffer2, hwifi_recv_len2);
 }

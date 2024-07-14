@@ -71,11 +71,12 @@ typedef enum HWIFI_Code {
     HWIFI_ERROR        = 0x01,
     HWIFI_FAILED       = 0x02,
     HWIFI_TIMEOUT      = 0x03,
-    HWIFI_CONNECTED    = 0x04,
-    HWIFI_DISCONNECTED = 0x05,
+    HWIFI_CONNECT      = 0x04,
+    HWIFI_DISCONNECT = 0x05,
     HWIFI_GETIP        = 0x06,
     HWIFI_CLOSED       = 0x07,
-    HWIFI_RECV         = 0x08
+    HWIFI_RECV         = 0x08,
+    HWIFI_BUSY         = 0x09
 } HWIFI_Code;
 
 typedef enum HWIFI_Mode {
@@ -100,6 +101,11 @@ typedef enum HWIFI_Encryption {
  * @param result_handler 结果处理回调
  */
 HWIFI_Context HWIFI_Init(UART *huart, void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content));
+
+/**
+ * 更新函数，解析刚刚收到的数据
+ */
+void HWIFI_Update();
 
 /**
  * 为注册的串口分配的事件回调
@@ -130,7 +136,7 @@ HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode);
  * @param channel WiFi 信道
  * @param enc 加密方式，需要与密码配合
  */
-HWIFI_Context HWIFI_SetAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc);
+HWIFI_Context HWIFI_SetSoftAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc);
 
 /**
  * 连接到指定的 WiFi
@@ -166,7 +172,7 @@ HWIFI_Context HWIFI_StopTCPServer();
  * @param ip IP地址首位
  * @param port 端口号
  */
-HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u8 port);
+HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u16 port);
 
 /**
  * 关闭 TCP 连接
