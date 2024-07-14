@@ -8,16 +8,19 @@
 
 HDEBUG_Init(&huart1);
 
-HDPrintln("Hello World!");
+HDEBUG_Println("Hello World!");
 
 ```
 
 ## Roadmap
 - [x] 数据类型定义
 - [x] 错误处理
-- [ ] 字符串基础操作
-  - [ ] 字符转移与连接
+- [x] 字符串基础操作
+  - [x] 字符转移与连接
   - [x] 基本类型 ToString
 - [ ] ESP WIFI AT 指令集驱动
+  - [x] WLAN
+  - [x] TCP/IP
+  - [ ] MQTT 
 - [ ] ZX-D30 蓝牙 AT 指令集驱动
 - [ ] OLED 屏幕驱动
