@@ -65,7 +65,7 @@ u16 HSTR_GetLen(u8 *str);
  * 将 source 字符串复制到 dest 中
  * @param source 要复制的字符串
  * @param dest 要粘贴的字符串
- * @return 新字符串首位指针
+ * @return dest 指针本身
  */
 u8 *HSTR_Copy(u8 *dest, u8 *source);
 
@@ -74,7 +74,7 @@ u8 *HSTR_Copy(u8 *dest, u8 *source);
  * @param source 要复制的字符串
  * @param dest 要粘贴的字符串
  * @param u16 长度
- * @return 新字符串首位指针
+ * @return dest 指针本身
  */
 u8 *HSTR_CopySize(u8 *dest, u8 *source, u16 len);
 

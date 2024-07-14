@@ -316,6 +316,16 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
         }
     }
 
+    if (ctx_long & HWIFI_CTX_AP) {
+        if (HSTR_Equal(hwifi_recv_buffer, "+STA_CONNECTED: ", 16)) {
+            result_handler(HWIFI_CTX_AP, HWIFI_CONNECTED, HSTR_New(hwifi_recv_buffer + 16));
+        } else if (HSTR_Equal(hwifi_recv_buffer, "+DIST_STA_IP: ", 14)) {
+            u8 ptr = 31; // 31 = 14(前缀长度) + 17(MAC地址长度), 理论上正好是逗号的位置，但谨慎起见还是加一下看看
+            while (*(hwifi_recv_buffer + ptr) != ',') ptr++;
+            result_handler(HWIFI_CTX_AP, HWIFI_GETIP, HSTR_NewSize(hwifi_recv_buffer, ptr, size - ptr));
+        }
+    }
+
     HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
 }
 
