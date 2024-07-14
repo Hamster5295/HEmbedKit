@@ -80,6 +80,29 @@ u8 *HSTR_Concat(u8 *left, u8 *right)
     return str;
 }
 
+u8 *HSTR_Concats(u16 count, ...)
+{
+    u16 len = 0;
+    va_list argl, argc;
+    va_start(argl, count);
+    va_copy(argc, argl);
+    for (u8 i = 0; i < count; i++) {
+        len += HSTR_GetLen(va_arg(argl, u8 *));
+    }
+    va_end(argl);
+
+    u8 *buf = hstr_alloc(len + 1);
+    len     = 0;
+    for (u8 i = 0; i < count; i++) {
+        u8 *str    = va_arg(argc, u8 *);
+        u16 offset = 0;
+        while (!HSTR_IS_END(str, offset)) *(buf + len++) = *(str + offset++);
+    }
+    *(buf + len) = HSTR_END_MARK;
+    va_end(argc);
+    return buf;
+}
+
 u8 HSTR_Compare(u8 *left, u8 *right)
 {
     u16 ptr = 0;
