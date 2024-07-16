@@ -21,6 +21,7 @@ bool HDEBUG_IsAvailable()
 void __HDEBUG_Init(UART *huart)
 {
     hdebug_port = huart;
+    HDEBUG_Log("HDebug", "Initialized");
 }
 
 void __HDEBUG_PrintSize(u8 *str, u16 size)
