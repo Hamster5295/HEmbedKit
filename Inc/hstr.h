@@ -55,6 +55,12 @@ u8 *HSTR_New(u8 *data);
 u8 *HSTR_NewSize(u8 *data, u16 len);
 
 /**
+ * 新建一个指定长度的空字符串
+ * @param len 长度
+ */
+u8 *HSTR_NewEmpty(u16 len);
+
+/**
  * 获取指定字符串长度，不包含终止标志
  * @param str 要查询的字符串
  * @return 字符串长度
