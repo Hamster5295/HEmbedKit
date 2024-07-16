@@ -12,28 +12,28 @@
 // 常量
 #if !defined(HWIFI_TIMEOUT_LEN)
 /**
- * 与 WiFi 外设通信的超时时限
+ * 与 WIFI 外设通信的超时时限
  */
 #define HWIFI_TIMEOUT_LEN 2000
 #endif
 
 #if !defined(HWIFI_BLOCK_TIMEOUT_LEN)
 /**
- * 与 WiFi 外设通信的超时时限
+ * 与 WIFI 外设通信的超时时限
  */
 #define HWIFI_BLOCK_TIMEOUT_LEN 8000
 #endif
 
 #if !defined(HWIFI_RECV_BUFFER_SIZE)
 /**
- * 接收 WiFi 外设的缓冲区大小
+ * 接收 WIFI 外设的缓冲区大小
  */
 #define HWIFI_RECV_BUFFER_SIZE 2048
 #endif
 
 #if !defined(HWIFI_SEND_BUFFER_SIZE)
 /**
- * 发送 WiFi 外设的缓冲区大小
+ * 发送 WIFI 外设的缓冲区大小
  */
 #define HWIFI_SEND_BUFFER_SIZE 2048
 #endif
@@ -51,14 +51,15 @@ typedef enum HWIFI_Context {
     HWIFI_CTX_Init               = 0x01,
     HWIFI_CTX_SetCWMode          = 0x02,
     HWIFI_CTX_SetSoftAp          = 0x03,
-    HWIFI_CTX_ConnectToWiFi      = 0x04,
-    HWIFI_CTX_ScanWiFi           = 0x05,
+    HWIFI_CTX_ConnectToWIFI      = 0x04,
+    HWIFI_CTX_ScanWIFI           = 0x05,
     HWIFI_CTX_Send               = 0x06,
     HWIFI_CTX_StartTCPServer     = 0x09,
     HWIFI_CTX_StopTCPServer      = 0x0A,
-    HWIFI_CTX_QueryIP            = 0x0B,
-    HWIFI_CTX_StartTCPConnection = 0x0C,
-    HWIFI_CTX_StopTCPConnection  = 0x0D,
+    HWIFI_CTX_QueryStationIP     = 0x0B,
+    HWIFI_CTX_QueryStationMAC    = 0x0C,
+    HWIFI_CTX_StartTCPConnection = 0x0D,
+    HWIFI_CTX_StopTCPConnection  = 0x0E,
 
     // 掩码，可以与上面的共存
     HWIFI_CTX_AP     = 0x8000,
@@ -67,16 +68,16 @@ typedef enum HWIFI_Context {
 } HWIFI_Context;
 
 typedef enum HWIFI_Code {
-    HWIFI_OK           = 0x00,
-    HWIFI_ERROR        = 0x01,
-    HWIFI_FAILED       = 0x02,
-    HWIFI_TIMEOUT      = 0x03,
-    HWIFI_CONNECT      = 0x04,
+    HWIFI_OK         = 0x00,
+    HWIFI_ERROR      = 0x01,
+    HWIFI_FAILED     = 0x02,
+    HWIFI_TIMEOUT    = 0x03,
+    HWIFI_CONNECT    = 0x04,
     HWIFI_DISCONNECT = 0x05,
-    HWIFI_GETIP        = 0x06,
-    HWIFI_CLOSED       = 0x07,
-    HWIFI_RECV         = 0x08,
-    HWIFI_BUSY         = 0x09
+    HWIFI_GETIP      = 0x06,
+    HWIFI_CLOSED     = 0x07,
+    HWIFI_RECV       = 0x08,
+    HWIFI_BUSY       = 0x09
 } HWIFI_Code;
 
 typedef enum HWIFI_Mode {
@@ -113,48 +114,48 @@ void HWIFI_Update();
 void HWIFI_RxEventCallback(UART *uart, u16 size);
 
 /**
- * WiFi 模块当前是否空闲？
+ * WIFI 模块当前是否空闲？
  * @return 是否空闲
  */
 bool HWIFI_IsIdle();
 
 /**
- * 阻塞等待某个 WiFi 操作执行完毕
+ * 阻塞等待某个 WIFI 操作执行完毕
  * @param ctx 需要等待的操作，一旦该上下文退出则继续执行
  */
 STATUS HWIFI_Block(HWIFI_Context ctx);
 
 /**
- * 设置 WiFi 模块连接的工作模式
+ * 设置 WIFI 模块连接的工作模式
  */
 HWIFI_Context HWIFI_SetMode(HWIFI_Mode mode);
 
 /**
  * 配置软路由模式，即热点模式
- * @param ssid WiFi 热点名称
+ * @param ssid WIFI 热点名称
  * @param pwd 密码
- * @param channel WiFi 信道
+ * @param channel WIFI 信道
  * @param enc 加密方式，需要与密码配合
  */
 HWIFI_Context HWIFI_SetSoftAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Encryption enc);
 
 /**
- * 连接到指定的 WiFi
- * @param ssid WiFi 名称
- * @param pwd WiFi 密码
+ * 连接到指定的 WIFI
+ * @param ssid WIFI 名称
+ * @param pwd WIFI 密码
  */
-HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd);
+HWIFI_Context HWIFI_ConnectToWIFI(char *ssid, char *pwd);
 
 /**
- * 使用一段拼好的字符串连接到指定 WiFi
- * @param token 拼好的字符串, 格式是 "WiFi名称","WiFi密码"
+ * 使用一段拼好的字符串连接到指定 WIFI
+ * @param token 拼好的字符串, 格式是 "WIFI名称","WIFI密码"
  */
-HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token);
+HWIFI_Context HWIFI_ConnectToWIFIByToken(char *token);
 
 /**
- * 扫描周围 WiFi 并返回列表
+ * 扫描周围 WIFI 并返回列表
  */
-HWIFI_Context HWIFI_ScanWiFi();
+HWIFI_Context HWIFI_ScanWIFI();
 
 /**
  * 启动 TCP 服务器
@@ -180,9 +181,14 @@ HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u16 port);
 HWIFI_Context HWIFI_StopTCPConnection();
 
 /**
- * 查询当前 IP 地址
+ * 查询当前网络下的 IP 地址
  */
-HWIFI_Context HWIFI_QueryIP();
+HWIFI_Context HWIFI_QueryStationIP();
+
+/**
+ * 查询当前网络下的 MAC 地址
+ */
+HWIFI_Context HWIFI_QueryStationMAC();
 
 /**
  * 发送指定长度数据

@@ -152,19 +152,32 @@ STATUS send_quot()
 
 void handle_recv(u8 *buf, u16 size)
 {
-    HDEBUG_LogSize("HWiFi", HSTR_Concat("Recv: ", buf), size + 6);
+    HDEBUG_LogSize("HWIFI", HSTR_Concat("Handle: ", buf), size + 6);
     HWIFI_Context ctx      = hwifi_ctx & 0x00FF;
     HWIFI_Context ctx_long = hwifi_ctx & 0xFF00;
 
     switch (hwifi_state) {
 
         case HWIFI_State_Init:
-            if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(buf + size - 6, "ATE0\r\n", 6)) {
-                HDEBUG_Log("HWiFi", "Initialized");
-                HWIFI_HandleResult(ctx, HWIFI_OK, buf);
-            } else {
-                HKIT_TriggerError(HERROR_WIFI_InitFailed);
-                HWIFI_HandleResult(ctx, HWIFI_ERROR, buf);
+
+            switch (hwifi_internal_state) {
+                case 0:
+                    if (HSTR_Equal(buf + size - 7, "ready\r\n", 7)) {
+                        HDEBUG_Log("HWIFI", "Reseted");
+                        send_str("ATE0\r\n");
+                        hwifi_internal_state = 1;
+                    }
+                    break;
+
+                case 1:
+                    if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(buf + size - 6, "ATE0\r\n", 6)) {
+                        HDEBUG_Log("HWIFI", "Initialized");
+                        HWIFI_HandleResult(ctx, HWIFI_OK, buf);
+                    } else {
+                        HKIT_TriggerError(HERROR_WIFI_InitFailed);
+                        HWIFI_HandleResult(ctx, HWIFI_ERROR, buf);
+                    }
+                    break;
             }
             break;
 
@@ -200,10 +213,18 @@ void handle_recv(u8 *buf, u16 size)
                         }
                         break;
 
-                    case HWIFI_CTX_QueryIP:
+                    case HWIFI_CTX_QueryStationIP:
                         u8 lptr = 10;
                         while (*(buf + lptr) != '"') lptr++;
                         u8 rptr = (++lptr) + 1;
+                        while (*(buf + rptr) != '"') rptr++;
+                        HWIFI_HandleResult(ctx, HWIFI_OK, HSTR_NewSize(buf + lptr, rptr - lptr));
+                        break;
+
+                    case HWIFI_CTX_QueryStationMAC:
+                        lptr = 11;
+                        while (*(buf + lptr) != '"') lptr++;
+                        rptr = (++lptr) + 1;
                         while (*(buf + rptr) != '"') rptr++;
                         HWIFI_HandleResult(ctx, HWIFI_OK, HSTR_NewSize(buf + lptr, rptr - lptr));
                         break;
@@ -239,7 +260,7 @@ void handle_recv(u8 *buf, u16 size)
         case HWIFI_State_WaitForResponse:
             switch (ctx) {
 
-                case HWIFI_CTX_ConnectToWiFi:
+                case HWIFI_CTX_ConnectToWIFI:
                     if (HSTR_Equal(buf + size - 11, "CONNECTED\r\n", 11))
                         result_handler(ctx, HWIFI_CONNECT, NULL);
 
@@ -254,7 +275,7 @@ void handle_recv(u8 *buf, u16 size)
                     else if (HSTR_Equal(buf, "+CWJAP:", 7))
                         result_handler(ctx, HWIFI_FAILED, buf + 7);
 
-                    else if (HWIFI_RECV_WITH_ERROR(size)) {
+                    if (HWIFI_RECV_WITH_ERROR(size)) {
                         HWIFI_HandleResult(ctx, HWIFI_ERROR, NULL);
                     }
                     break;
@@ -310,6 +331,8 @@ void handle_recv(u8 *buf, u16 size)
         } else if (HSTR_Equal(buf, "+DIST_STA_IP:\"", 14)) {
             u8 ptr = 34; // 34 = 14(前缀长度) + 17(MAC地址长度) + 3(引号与逗号), 理论上正好是ip首位
             result_handler(HWIFI_CTX_AP, HWIFI_GETIP, HSTR_NewSize(buf + ptr, size - ptr - 3));
+        } else if (HSTR_Equal(buf, "+STA_DISCONNECTED:\"", 19)) {
+            result_handler(HWIFI_CTX_AP, HWIFI_DISCONNECT, HSTR_NewSize(buf + 19, size - 22)); // 19 是 16 + 末尾的 "\"\r\n"
         }
     }
 }
@@ -331,7 +354,7 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWI
     if (huart != NULL) {
         HAL_UART_RegisterRxEventCallback(huart, HWIFI_RxEventCallback);
         HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
-        send_str("ATE0\r\n");
+        send_str("AT+RST\r\n");
     }
 
     HWIFI_CALL_END(HWIFI_CTX_Init, HWIFI_State_Init);
@@ -339,6 +362,7 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWI
 
 void HWIFI_Update()
 {
+    HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
     while (hwifi_handle_queue_tail != hwifi_handle_queue_head) {
         __nop();
         if (hwifi_handle_queue[hwifi_handle_queue_tail] != NULL) {
@@ -359,6 +383,8 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
     if (uart != hwifi_port) return;
 
     HWIFI_ASSERT_RECV_LEN(size);
+
+    // HDEBUG_Log("HWIFI", "Recv!");
 
     *hwifi_recv_len         = size;
     hwifi_recv_buffer[size] = HSTR_END_MARK;
@@ -427,7 +453,7 @@ HWIFI_Context HWIFI_SetSoftAPConfig(char *ssid, char *pwd, u8 channel, HWIFI_Enc
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_SetSoftAp);
 }
 
-HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd)
+HWIFI_Context HWIFI_ConnectToWIFI(char *ssid, char *pwd)
 {
     HWIFI_ASSERT();
     send_str("AT+CWJAP=\"");
@@ -435,23 +461,23 @@ HWIFI_Context HWIFI_ConnectToWiFi(char *ssid, char *pwd)
     send("\",\"", 3);
     send_str(pwd);
     send("\"\r\n", 3);
-    HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWiFi);
+    HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWIFI);
 }
 
-HWIFI_Context HWIFI_ConnectToWiFiByToken(char *token)
+HWIFI_Context HWIFI_ConnectToWIFIByToken(char *token)
 {
     HWIFI_ASSERT();
     send_str("AT+CWJAP=");
     send_str(token);
     send_crlf();
-    HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWiFi);
+    HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWIFI);
 }
 
-HWIFI_Context HWIFI_ScanWiFi()
+HWIFI_Context HWIFI_ScanWIFI()
 {
     HWIFI_ASSERT();
     send_str("AT+CWLAP\r\n");
-    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_ScanWiFi);
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_ScanWIFI);
 }
 
 HWIFI_Context HWIFI_StartTCPServer(u16 port)
@@ -497,12 +523,20 @@ HWIFI_Context HWIFI_StopTCPConnection()
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopTCPConnection);
 }
 
-HWIFI_Context HWIFI_QueryIP()
+HWIFI_Context HWIFI_QueryStationIP()
 {
     HWIFI_ASSERT();
 
     send_str("AT+CIPSTA?\r\n");
-    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_QueryIP);
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_QueryStationIP);
+}
+
+HWIFI_Context HWIFI_QueryStationMAC()
+{
+    HWIFI_ASSERT();
+
+    send_str("AT+CIPSTAMAC?\r\n");
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_QueryStationMAC);
 }
 
 HWIFI_Context HWIFI_Send(u8 *str, u16 len)
