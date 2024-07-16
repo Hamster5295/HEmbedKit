@@ -28,6 +28,8 @@
 
 #define UART   UART_HandleTypeDef
 #define I2C    I2C_HandleTypeDef
+#define TIM    TIM_HandleTypeDef
+#define ADC    ADC_HandleTypeDef
 
 // 这个 include 是为了找到当前的 hal 库
 // 从而不需要手动设置 stm32 型号
@@ -49,7 +51,7 @@ typedef enum {
      */
     HERROR_DEBUG_Unavailable = 0x20,
 
-    // WiFi 错误
+    // WIFI 错误
     /**
      * 当 HWIFI 尚未初始化，却先调用了其他相关函数时触发。需要优先调用初始化 HWIFI_Init()
      */
@@ -61,7 +63,7 @@ typedef enum {
     HERROR_WIFI_InitFailed = 0x31,
 
     /**
-     * 当 WiFi 外设当前正在执行某个操作(等待操作指令的回复)，却仍尝试执行新操作时触发
+     * 当 WIFI 外设当前正在执行某个操作(等待操作指令的回复)，却仍尝试执行新操作时触发
      */
     HERROR_WIFI_Busy = 0x32,
 
@@ -79,6 +81,22 @@ typedef enum {
      * 当发送缓冲区溢出时触发
      */
     HERROR_WIFI_SendOverflow = 0x35,
+
+    // E2PROM错误
+    /**
+     * 当 HPROM 尚未初始化，却先调用了其他相关函数时触发。需要优先调用初始化 HPROM_Init()
+     */
+    HERROR_PROM_Unavailable = 0x40,
+
+    /**
+     * 当 HPROM 初始化失败时触发。注意检查接线与引脚上拉情况
+     */
+    HERROR_PROM_InitFailed = 0x41,
+
+    /**
+     * 当 HPROM 读写超时时触发
+     */
+    HERROR_PROM_TIMEOUT = 0x42
 } HError;
 
 // 函数

@@ -43,6 +43,14 @@ u8 *HSTR_NewSize(u8 *data, u16 len)
     return str;
 }
 
+u8 *HSTR_NewEmpty(u16 len)
+{
+    u8 *str = hstr_alloc(len);
+    for (len--; len > 0; len--) *(str + len) = 0;
+    *str = 0;
+    return str;
+}
+
 u16 HSTR_GetLen(u8 *str)
 {
     u16 len = 0;
@@ -210,22 +218,28 @@ u8 *HSTR_ErrorToString(HError err)
             return HSTR_New("HDEBUG is not available.\r\nENABLE_HDEBUG is not defined, or HDEBUG_Init(huart) is not called in advance.");
 
         case HERROR_WIFI_Unavailable:
-            return HSTR_New("HWiFi is not available.\r\nPlease call HWIFI_Init() in advance!");
+            return HSTR_New("HWIFI is not available.\r\nPlease call HWIFI_Init() in advance!");
 
         case HERROR_WIFI_InitFailed:
-            return HSTR_New("HWiFi init failed. Response from module is not correct.");
+            return HSTR_New("HWIFI init failed. Response from module is not correct.");
 
         case HERROR_WIFI_Busy:
-            return HSTR_New("HWiFi is currently busy under another task!");
+            return HSTR_New("HWIFI is currently busy under another task!");
 
         case HERROR_WIFI_BlockTimeout:
-            return HSTR_New("HWiFi blocked operation timeout.");
+            return HSTR_New("HWIFI blocked operation timeout.");
 
         case HERROR_WIFI_RecvOverflow:
-            return HSTR_New("HWiFi recv buffer overflows. Define HWIFI_RECV_BUFFER_SIZE as a larger value!");
+            return HSTR_New("HWIFI recv buffer overflows. Define HWIFI_RECV_BUFFER_SIZE as a larger value!");
 
         case HERROR_WIFI_SendOverflow:
-            return HSTR_New("HWiFi send buffer overflows. Define HWIFI_SEND_BUFFER_SIZE as a larger value!");
+            return HSTR_New("HWIFI send buffer overflows. Define HWIFI_SEND_BUFFER_SIZE as a larger value!");
+
+        case HERROR_PROM_Unavailable:
+            return HSTR_New("HPROM is not available.\r\nPlease call HPROM_Init() in advance!");
+
+        case HERROR_PROM_InitFailed:
+            return HSTR_New("HPROM init failed. No response from module.");
 
         default:
             return HSTR_Concat("Unknown Error! Code: ", HSTR_U8ToString(err));
