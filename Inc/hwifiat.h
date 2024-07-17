@@ -60,6 +60,9 @@ typedef enum HWIFI_Context {
     HWIFI_CTX_QueryStationMAC    = 0x0C,
     HWIFI_CTX_StartTCPConnection = 0x0D,
     HWIFI_CTX_StopTCPConnection  = 0x0E,
+    HWIFI_CTX_SetMQTTUserConfig  = 0x0F,
+    HWIFI_CTX_ConnectMQTT        = 0x10,
+    HWIFI_CTX_PublishMQTT        = 0x11,
 
     // 掩码，可以与上面的共存
     HWIFI_CTX_AP     = 0x8000,
@@ -93,6 +96,19 @@ typedef enum HWIFI_Encryption {
     HWIFI_ENC_WPA_WPA2_PSK = 4,
 } HWIFI_Encryption;
 
+typedef enum HWIFI_MQTT_Scheme {
+    HWIFI_MQTTSCHEME_TCP                    = 1,
+    HWIFI_MQTTSCHEME_TLS_NO_CERTI           = 2,
+    HWIFI_MQTTSCHEME_TLS_CERTI_SERVER       = 3,
+    HWIFI_MQTTSCHEME_TLS_CERTI_CLIENT       = 4,
+    HWIFI_MQTTSCHEME_TLS_CERTI_BOTH         = 5,
+    HWIFI_MQTTSCHEME_WEBSOCKET_TCP          = 6,
+    HWIFI_MQTTSCHEME_WEBSOCKET_NO_CERTI     = 7,
+    HWIFI_MQTTSCHEME_WEBSOCKET_CERTI_SERVER = 8,
+    HWIFI_MQTTSCHEME_WEBSOCKET_CERTI_CLIENT = 9,
+    HWIFI_MQTTSCHEME_WEBSOCKET_CERTI_BOTH   = 10,
+} HWIFI_MQTT_Scheme;
+
 // 宏
 
 // 函数
@@ -101,7 +117,8 @@ typedef enum HWIFI_Encryption {
  * @param huart 要使用的串口
  * @param result_handler 结果处理回调
  */
-HWIFI_Context HWIFI_Init(UART *huart, void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content));
+HWIFI_Context
+HWIFI_Init(UART *huart, void (*result_handler)(HWIFI_Context ctx, HWIFI_Code status, u8 *content));
 
 /**
  * 更新函数，解析刚刚收到的数据
@@ -227,5 +244,32 @@ HWIFI_Context HWIFI_SendClientStr(u8 client, u8 *str);
  * 将接收缓冲区的数据原封不动地发给指定连接
  */
 HWIFI_Context HWIFI_XferClient(u8 client);
+
+/**
+ * 设置 MQTT 连接的配置
+ * @param scheme 连接方式
+ * @param client_id 客户端 id
+ * @param username 认证用户名
+ * @param pwd 认证密码
+ */
+HWIFI_Context HWIFI_SetMQTTUserConfig(HWIFI_MQTT_Scheme scheme, u8 *client_id, u8 *username, u8 *pwd);
+
+/**
+ * 连接到 MQTT 服务器
+ * @param url 服务器 url
+ * @param port 服务器端口
+ * @param retry 断开时自动重连
+ */
+HWIFI_Context HWIFI_ConnectMQTT(u8 *url, u16 port, bool retry);
+
+/**
+ * 向 MQTT 话题发布定长数据
+ * @param topic 要发布的话题
+ * @param data 数据
+ * @param len 数据长度
+ * @param qos 服务质量，0~2，影响数据传输的可靠性
+ * @param retain 是否在服务器端保存该数据，直到下一个 retain 数据到达
+ */
+HWIFI_Context HWIFI_PublishMQTTSize(u8 *topic, u8 *data, u16 len, u8 qos, bool retain);
 
 #endif // __HWIFIAT_H__

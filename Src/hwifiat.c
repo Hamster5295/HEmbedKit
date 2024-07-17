@@ -21,7 +21,7 @@ typedef struct HWIFI_State_Flags {
     u8 buffer : 1;
 } HWIFI_State_Flags;
 
-HWIFI_State_Flags flags;
+HWIFI_State_Flags hwifi_flags;
 
 HWIFI_State hwifi_state = HWIFI_State_Idle;
 HWIFI_Context hwifi_ctx = HWIFI_CTX_None;
@@ -245,6 +245,7 @@ void handle_recv(u8 *buf, u16 size)
                 // 发送内容
                 switch (ctx) {
                     case HWIFI_CTX_Send:
+                    case HWIFI_CTX_PublishMQTT:
                         send(hwifi_send_buffer, hwifi_send_len);
                         break;
                 }
@@ -362,11 +363,11 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWI
 
 void HWIFI_Update()
 {
-    HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
     while (hwifi_handle_queue_tail != hwifi_handle_queue_head) {
         __nop();
         if (hwifi_handle_queue[hwifi_handle_queue_tail] != NULL) {
             hwifi_handle_queue[hwifi_handle_queue_tail]();
+            hwifi_handle_queue[hwifi_handle_queue_tail] = NULL;
         }
         hwifi_handle_queue_tail++;
         if (hwifi_handle_queue_tail >= 3) hwifi_handle_queue_tail = 0;
@@ -391,20 +392,20 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
     hwifi_block_tick        = 0;
 
     // 切换缓冲区
-    if (flags.buffer) {
+    if (hwifi_flags.buffer) {
         hwifi_handle_queue[hwifi_handle_queue_head++] = handle_recv2;
         if (hwifi_handle_queue_head >= 3) hwifi_handle_queue_head = 0;
 
-        hwifi_recv_buffer = hwifi_recv_buffer1;
-        hwifi_recv_len    = &hwifi_recv_len1;
-        flags.buffer      = false;
+        hwifi_recv_buffer  = hwifi_recv_buffer1;
+        hwifi_recv_len     = &hwifi_recv_len1;
+        hwifi_flags.buffer = false;
     } else {
         hwifi_handle_queue[hwifi_handle_queue_head++] = handle_recv1;
         if (hwifi_handle_queue_head >= 3) hwifi_handle_queue_head = 0;
 
-        hwifi_recv_buffer = hwifi_recv_buffer2;
-        hwifi_recv_len    = &hwifi_recv_len2;
-        flags.buffer      = true;
+        hwifi_recv_buffer  = hwifi_recv_buffer2;
+        hwifi_recv_len     = &hwifi_recv_len2;
+        hwifi_flags.buffer = true;
     }
     HAL_UARTEx_ReceiveToIdle_IT(hwifi_port, hwifi_recv_buffer, HWIFI_RECV_BUFFER_SIZE);
 }
@@ -561,7 +562,7 @@ HWIFI_Context HWIFI_SendStr(u8 *str)
 HWIFI_Context HWIFI_Xfer()
 {
     // 由于已经切换过了，所以需要与 flag 反着来
-    return flags.buffer ? HWIFI_Send(hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_Send(hwifi_recv_buffer2, hwifi_recv_len2);
+    return hwifi_flags.buffer ? HWIFI_Send(hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_Send(hwifi_recv_buffer2, hwifi_recv_len2);
 }
 
 HWIFI_Context HWIFI_SendClient(u8 client, u8 *str, u16 len)
@@ -588,5 +589,54 @@ HWIFI_Context HWIFI_SendClientStr(u8 client, u8 *str)
 HWIFI_Context HWIFI_XferClient(u8 client)
 {
     // 由于已经切换过了，所以需要与 flag 反着来
-    return flags.buffer ? HWIFI_SendClient(client, hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_SendClient(client, hwifi_recv_buffer2, hwifi_recv_len2);
+    return hwifi_flags.buffer ? HWIFI_SendClient(client, hwifi_recv_buffer1, hwifi_recv_len1) : HWIFI_SendClient(client, hwifi_recv_buffer2, hwifi_recv_len2);
+}
+
+HWIFI_Context HWIFI_SetMQTTUserConfig(HWIFI_MQTT_Scheme scheme, u8 *client_id, u8 *username, u8 *pwd)
+{
+    HWIFI_ASSERT();
+
+    send("AT+MQTTUSERCFG=0,", 17);
+    send_str(HSTR_U8ToString(scheme));
+    send(",\"", 2);
+    send_str(client_id);
+    send("\",\"", 3);
+    send_str(username);
+    send("\",\"", 3);
+    send_str(pwd);
+    send("\",0,0,\"\"\r\n", 10);
+
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_SetMQTTUserConfig);
+}
+
+HWIFI_Context HWIFI_ConnectMQTT(u8 *url, u16 port, bool retry)
+{
+    HWIFI_ASSERT();
+
+    send("AT+MQTTCONN=0,\"", 15);
+    send_str(url);
+    send("\",", 2);
+    send_str(HSTR_U16ToString(port));
+    send_comma();
+    send(retry ? "1\r\n" : "0\r\n", 3);
+
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_ConnectMQTT);
+}
+
+HWIFI_Context HWIFI_PublishMQTTSize(u8 *topic, u8 *data, u16 len, u8 qos, bool retain)
+{
+    HWIFI_ASSERT();
+    HWIFI_ASSERT_SEND_LEN(len);
+    HSTR_CopySize(hwifi_send_buffer, data, len);
+    hwifi_send_len = len;
+
+    send("AT+MQTTPUBRAW=0,\"", 17);
+    send_str(topic);
+    send("\",", 2);
+    send_str(HSTR_U16ToString(len));
+    send_comma();
+    send_str(HSTR_U8ToString(qos));
+    send(retain ? ",1\r\n" : ",0\r\n", 4);
+
+    HWIFI_CALL_END_FOR_SEND(HWIFI_CTX_PublishMQTT);
 }
