@@ -5,28 +5,27 @@
     typedef struct __HCOLS_CONV_ARR_##name {                                                                                                                                  \
         datatype arr[size];                                                                                                                                                   \
         u16 ptr;                                                                                                                                                              \
-        u32 (*mean)();                                                                                                                                                     \
+        u32 sum;                                                                                                                                                              \
+        u32 (*mean)();                                                                                                                                                        \
         void (*push)(datatype data);                                                                                                                                          \
         datatype (*max)();                                                                                                                                                    \
         datatype (*min)();                                                                                                                                                    \
         datatype (*range)();                                                                                                                                                  \
     } __HCOLS_CONV_ARR_##name;                                                                                                                                                \
-    u32 __HCOLS_CONV_ARR_##name##_mean();                                                                                                                                  \
+    u32 __HCOLS_CONV_ARR_##name##_mean();                                                                                                                                     \
     void __HCOLS_CONV_ARR_##name##_push(datatype data);                                                                                                                       \
     datatype __HCOLS_CONV_ARR_##name##_max();                                                                                                                                 \
     datatype __HCOLS_CONV_ARR_##name##_min();                                                                                                                                 \
     datatype __HCOLS_CONV_ARR_##name##_range();                                                                                                                               \
-    __HCOLS_CONV_ARR_##name name = {{0}, 0, __HCOLS_CONV_ARR_##name##_mean, __HCOLS_CONV_ARR_##name##_push, __HCOLS_CONV_ARR_##name##_max, __HCOLS_CONV_ARR_##name##_min}; \
-    u32 __HCOLS_CONV_ARR_##name##_mean()                                                                                                                                   \
+    __HCOLS_CONV_ARR_##name name = {{0}, 0, 0, __HCOLS_CONV_ARR_##name##_mean, __HCOLS_CONV_ARR_##name##_push, __HCOLS_CONV_ARR_##name##_max, __HCOLS_CONV_ARR_##name##_min}; \
+    u32 __HCOLS_CONV_ARR_##name##_mean()                                                                                                                                      \
     {                                                                                                                                                                         \
-        u32 result = 0;                                                                                                                                                       \
-        for (u16 i = 0; i < size; i++) {                                                                                                                                      \
-            result += name.arr[i];                                                                                                                                            \
-        }                                                                                                                                                                     \
-        return result / size;                                                                                                                                                 \
+        return name.sum / size;                                                                                                                                               \
     }                                                                                                                                                                         \
     void __HCOLS_CONV_ARR_##name##_push(datatype data)                                                                                                                        \
     {                                                                                                                                                                         \
+        name.sum -= name.arr[name.ptr];                                                                                                                                       \
+        name.sum += data;                                                                                                                                                     \
         name.arr[name.ptr++] = data;                                                                                                                                          \
         if (name.ptr >= size) name.ptr = 0;                                                                                                                                   \
     }                                                                                                                                                                         \
