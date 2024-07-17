@@ -72,10 +72,9 @@ u8 *HSTR_Copy(u8 *dest, u8 *source)
 u8 *HSTR_CopySize(u8 *dest, u8 *source, u16 len)
 {
     u16 idx = 0;
-    for (; idx < len && *(source + idx) != HSTR_END_MARK; idx++) {
+    for (; idx < len; idx++) {
         *(dest + idx) = *(source + idx);
     }
-    *(dest + idx) = HSTR_END_MARK;
     return dest;
 }
 
@@ -158,7 +157,7 @@ u8 *HSTR_U32ToString(u32 number)
     }
 
     u8 len  = i + 1;
-    u8 *str = hstr_alloc(len + 1);
+    u8 *str = hstr_alloc(len);
 
     for (u8 j = 0; j < len; (j++, i--)) {
         *(str + j) = *(buffer + i);
