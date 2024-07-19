@@ -52,10 +52,12 @@ typedef enum HWIFI_Context {
     HWIFI_CTX_SetCWMode          = 0x02,
     HWIFI_CTX_SetSoftAp          = 0x03,
     HWIFI_CTX_ConnectToWIFI      = 0x04,
-    HWIFI_CTX_ScanWIFI           = 0x05,
-    HWIFI_CTX_Send               = 0x06,
-    HWIFI_CTX_StartTCPServer     = 0x09,
-    HWIFI_CTX_StopTCPServer      = 0x0A,
+    HWIFI_CTX_DisconnectWIFI     = 0x05,
+    HWIFI_CTX_ScanWIFI           = 0x06,
+    HWIFI_CTX_Send               = 0x07,
+    HWIFI_CTX_StartTCPServer     = 0x08,
+    HWIFI_CTX_StopTCPServer      = 0x09,
+    HWIFI_CTX_CloseTCPClient     = 0x0A,
     HWIFI_CTX_QueryStationIP     = 0x0B,
     HWIFI_CTX_QueryStationMAC    = 0x0C,
     HWIFI_CTX_StartTCPConnection = 0x0D,
@@ -63,6 +65,7 @@ typedef enum HWIFI_Context {
     HWIFI_CTX_SetMQTTUserConfig  = 0x0F,
     HWIFI_CTX_ConnectMQTT        = 0x10,
     HWIFI_CTX_PublishMQTT        = 0x11,
+    HWIFI_CTX_StopMQTT           = 0x12,
 
     // 掩码，可以与上面的共存
     HWIFI_CTX_AP     = 0x8000,
@@ -170,6 +173,11 @@ HWIFI_Context HWIFI_ConnectToWIFI(char *ssid, char *pwd);
 HWIFI_Context HWIFI_ConnectToWIFIByToken(char *token);
 
 /**
+ * 从 WIFI 连接断开
+ */
+HWIFI_Context HWIFI_DisconnectWIFI();
+
+/**
  * 扫描周围 WIFI 并返回列表
  */
 HWIFI_Context HWIFI_ScanWIFI();
@@ -184,6 +192,11 @@ HWIFI_Context HWIFI_StartTCPServer(u16 port);
  * 关闭 TCP 服务器
  */
 HWIFI_Context HWIFI_StopTCPServer();
+
+/**
+ * 关闭与连接到 TCP 服务器的某个客户端的连接
+ */
+HWIFI_Context HWIFI_CloseTCPClient(u8 client);
 
 /**
  * 通过指定地址和端口建立TCP连接
@@ -271,5 +284,10 @@ HWIFI_Context HWIFI_ConnectMQTT(u8 *url, u16 port, bool retry);
  * @param retain 是否在服务器端保存该数据，直到下一个 retain 数据到达
  */
 HWIFI_Context HWIFI_PublishMQTTSize(u8 *topic, u8 *data, u16 len, u8 qos, bool retain);
+
+/**
+ * 终止 MQTT 连接
+ */
+HWIFI_Context HWIFI_StopMQTT();
 
 #endif // __HWIFIAT_H__

@@ -389,7 +389,7 @@ void HWIFI_RxEventCallback(UART *uart, u16 size)
 
     *hwifi_recv_len         = size;
     hwifi_recv_buffer[size] = HSTR_END_MARK;
-    hwifi_block_tick        = 0;
+    hwifi_block_tick        = HAL_GetTick();
 
     // 切换缓冲区
     if (hwifi_flags.buffer) {
@@ -474,6 +474,13 @@ HWIFI_Context HWIFI_ConnectToWIFIByToken(char *token)
     HWIFI_CALL_END_FOR_RESPONSE(HWIFI_CTX_ConnectToWIFI);
 }
 
+HWIFI_Context HWIFI_DisconnectWIFI()
+{
+    HWIFI_ASSERT();
+    send_str("AT+CWQAP\r\n");
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_DisconnectWIFI);
+}
+
 HWIFI_Context HWIFI_ScanWIFI()
 {
     HWIFI_ASSERT();
@@ -498,6 +505,16 @@ HWIFI_Context HWIFI_StopTCPServer()
     send_str("AT+CIPSERVER=0\r\n");
     hwifi_ctx &= ~HWIFI_CTX_SERVER;
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopTCPServer);
+}
+
+HWIFI_Context HWIFI_CloseTCPClient(u8 client)
+{
+    HWIFI_ASSERT();
+
+    send_str("AT+CIPCLOSE=");
+    send(&client, 1);
+    send_crlf();
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_CloseTCPClient);
 }
 
 HWIFI_Context HWIFI_StartTCPConnection(u8 *ip, u16 port)
@@ -639,4 +656,12 @@ HWIFI_Context HWIFI_PublishMQTTSize(u8 *topic, u8 *data, u16 len, u8 qos, bool r
     send(retain ? ",1\r\n" : ",0\r\n", 4);
 
     HWIFI_CALL_END_FOR_SEND(HWIFI_CTX_PublishMQTT);
+}
+
+HWIFI_Context HWIFI_StopMQTT()
+{
+    HWIFI_ASSERT();
+
+    send_str("AT+MQTTCLEAN=0\r\n");
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopMQTT);
 }
