@@ -23,17 +23,24 @@
 #define false 0
 #define null  0
 
-// HAL 库的数据类型
-#define STATUS HAL_StatusTypeDef
-
-#define UART   UART_HandleTypeDef
-#define I2C    I2C_HandleTypeDef
-#define TIM    TIM_HandleTypeDef
-#define ADC    ADC_HandleTypeDef
-
 // 这个 include 是为了找到当前的 hal 库
 // 从而不需要手动设置 stm32 型号
 #include "main.h"
+
+// HAL 库的数据类型
+#define STATUS HAL_StatusTypeDef
+
+#ifdef HAL_UART_STATE_READY
+#define UART UART_HandleTypeDef
+#endif
+
+#ifdef HAL_I2C_ERROR_NONE
+#define I2C I2C_HandleTypeDef
+#endif
+
+#ifdef TIM_CLOCKSOURCE_INTERNAL
+#define TIM TIM_HandleTypeDef
+#endif
 
 /**
  * HKit 所能触发的所有错误码

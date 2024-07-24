@@ -2,6 +2,8 @@
 #include "hdebug.h"
 #include "hstr.h"
 
+#if defined(I2C)
+
 I2C *hprom_port = NULL;
 u16 addr_rd, addr_wr, mem_addr_size;
 
@@ -76,3 +78,5 @@ void HPROM_WriteStr(u16 addr, u8 *str)
 {
     HPROM_Write(addr, str, HSTR_GetLen(str) + 1);
 }
+
+#endif // I2C

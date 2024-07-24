@@ -7,6 +7,8 @@
 
 #include "hkit.h"
 
+#if defined(UART)
+
 #pragma clang diagnostic ignored "-Wswitch"
 
 // 常量
@@ -289,5 +291,7 @@ HWIFI_Context HWIFI_PublishMQTTSize(u8 *topic, u8 *data, u16 len, u8 qos, bool r
  * 终止 MQTT 连接
  */
 HWIFI_Context HWIFI_StopMQTT();
+
+#endif // UART
 
 #endif // __HWIFIAT_H__

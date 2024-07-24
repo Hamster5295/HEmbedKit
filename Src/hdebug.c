@@ -1,6 +1,8 @@
 #include "hdebug.h"
 #include "hstr.h"
 
+#if defined(UART)
+
 #ifdef ENABLE_HDEBUG
 UART *hdebug_port = null;
 #endif
@@ -51,4 +53,6 @@ void __HDEBUG_PrintError(HError code)
     __HDEBUG_Println(HSTR_ErrorToString(code));
 }
 
-#endif
+#endif // ENABLE_HDEBUG
+
+#endif // UART

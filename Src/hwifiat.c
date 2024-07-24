@@ -2,6 +2,8 @@
 #include "hstr.h"
 #include "hdebug.h"
 
+#if defined(UART)
+
 UART *hwifi_port = NULL;
 
 u8 hwifi_send_buffer[HWIFI_SEND_BUFFER_SIZE] = {0};
@@ -665,3 +667,5 @@ HWIFI_Context HWIFI_StopMQTT()
     send_str("AT+MQTTCLEAN=0\r\n");
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopMQTT);
 }
+
+#endif // UART

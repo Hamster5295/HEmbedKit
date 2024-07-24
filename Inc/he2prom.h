@@ -3,6 +3,8 @@
 
 #include "hkit.h"
 
+#if defined(I2C)
+
 #if !defined(HPROM_TIMEOUT)
 /**
  * E2PROM 读写的超时时间
@@ -62,5 +64,7 @@ void HPROM_Write(u16 addr, u8 *arr, u16 len);
  * @param str 字符串首地址
  */
 void HPROM_WriteStr(u16 addr, u8 *str);
+
+#endif // I2C
 
 #endif // __HE2PROM_H__
