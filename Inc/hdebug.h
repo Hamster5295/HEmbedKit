@@ -3,6 +3,8 @@
 
 #include "hkit.h"
 
+#if defined(UART)
+
 // 常量
 /**
  * DEBUG 串口输出的超时时间
@@ -158,5 +160,7 @@ void __HDEBUG_PrintSize(u8 *str, u16 size);
  */
 void __HDEBUG_PrintError(HError code);
 #endif // ENABLE_HDEBUG
+
+#endif // UART
 
 #endif // __HDEBUG_H__
