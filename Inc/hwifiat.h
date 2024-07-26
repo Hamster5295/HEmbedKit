@@ -62,15 +62,18 @@ typedef enum HWIFI_Context {
     HWIFI_CTX_QueryStationMAC    = 0x0C,
     HWIFI_CTX_StartTCPConnection = 0x0D,
     HWIFI_CTX_StopTCPConnection  = 0x0E,
-    HWIFI_CTX_SetMQTTUserConfig  = 0x0F,
-    HWIFI_CTX_ConnectMQTT        = 0x10,
-    HWIFI_CTX_PublishMQTT        = 0x11,
-    HWIFI_CTX_StopMQTT           = 0x12,
+    HWIFI_CTX_StartPassthrough   = 0x0F,
+    HWIFI_CTX_StopPassthrough    = 0x10,
+    HWIFI_CTX_SetMQTTUserConfig  = 0x11,
+    HWIFI_CTX_ConnectMQTT        = 0x12,
+    HWIFI_CTX_PublishMQTT        = 0x13,
+    HWIFI_CTX_StopMQTT           = 0x14,
 
     // 掩码，可以与上面的共存
-    HWIFI_CTX_AP     = 0x8000,
-    HWIFI_CTX_SERVER = 0x4000,
-    HWIFI_CTX_CLIENT = 0x2000
+    HWIFI_CTX_AP          = 0x8000,
+    HWIFI_CTX_SERVER      = 0x4000,
+    HWIFI_CTX_CLIENT      = 0x2000,
+    HWIFI_CTX_Passthrough = 0x1000,
 } HWIFI_Context;
 
 typedef enum HWIFI_Code {
@@ -219,6 +222,16 @@ HWIFI_Context HWIFI_QueryStationIP();
  * 查询当前网络下的 MAC 地址
  */
 HWIFI_Context HWIFI_QueryStationMAC();
+
+/**
+ * 启动透传模式
+ */
+HWIFI_Context HWIFI_StartPassthrough();
+
+/**
+ * 关闭透传模式
+ */
+HWIFI_Context HWIFI_StopPassthrough();
 
 /**
  * 发送指定长度数据
