@@ -17,6 +17,12 @@
 #define HPROM_TRAIL_TIME 3
 #endif // HPROM_TRAIL_TIME
 
+#if !defined(HPROM_DELAY)
+
+#define HPROM_DELAY 5
+
+#endif // HPROM_DELAY
+
 // 函数
 /**
  * 初始化 E2PROM 通信外设

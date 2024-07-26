@@ -48,27 +48,29 @@ u8 *HPROM_Read(u16 addr, u16 len)
 void HPROM_Write_Byte(u16 addr, u8 byte)
 {
     HAL_I2C_Mem_Write(hprom_port, addr_wr, addr, mem_addr_size, &byte, 1, HPROM_TIMEOUT);
-    HAL_Delay(5);
+    HAL_Delay(HPROM_DELAY);
 }
 
 void HPROM_Write(u16 addr, u8 *arr, u16 len)
 {
     u8 offset = 8 - addr % 8;
-    if (len <= offset)
+    if (len <= offset) {
         HAL_I2C_Mem_Write(hprom_port, addr_wr, addr, mem_addr_size, arr, len, HPROM_TIMEOUT);
-    else {
+        HAL_Delay(HPROM_DELAY);
+    } else {
         len -= offset;
         u16 cnt    = len / 8;
         u8 remains = len % 8, i = 0;
         HAL_I2C_Mem_Write(hprom_port, addr_wr, addr, mem_addr_size, arr, offset, HPROM_TIMEOUT);
-        HAL_Delay(5);
+        HAL_Delay(HPROM_DELAY);
         for (i = 0; i < cnt; i++) {
             HAL_I2C_Mem_Write(hprom_port, addr_wr, addr + offset + i * 8, mem_addr_size, arr + offset + i * 8, 8, HPROM_TIMEOUT);
-            HAL_Delay(5);
+            HAL_Delay(HPROM_DELAY);
         }
-        if (remains)
+        if (remains) {
             HAL_I2C_Mem_Write(hprom_port, addr_wr, addr + offset + i * 8, mem_addr_size, arr + offset + i * 8, remains, HPROM_TIMEOUT);
-        HAL_Delay(5);
+            HAL_Delay(HPROM_DELAY);
+        }
     }
 }
 
