@@ -1,5 +1,6 @@
 #include "hkit.h"
 #include "hstr.h"
+#include "hdebug.h"
 
 void (*error_handler)(HError err) = HKIT_DefaultErrorHandler;
 

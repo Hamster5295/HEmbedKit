@@ -154,7 +154,7 @@ STATUS send_quot()
 
 void handle_recv(u8 *buf, u16 size)
 {
-    HDEBUG_LogSize("HWIFI", HSTR_Concat("Handle: ", buf), size + 6);
+    HDEBUG_LogSize("HWIFI", HSTR_Concat("Handle: ", buf), size + 8);
     HWIFI_Context ctx      = hwifi_ctx & 0x00FF;
     HWIFI_Context ctx_long = hwifi_ctx & 0xFF00;
 
@@ -172,7 +172,7 @@ void handle_recv(u8 *buf, u16 size)
                     break;
 
                 case 1:
-                    if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(buf + size - 6, "ATE0\r\n", 6)) {
+                    if (HWIFI_RECV_WITH_OK(size) || HSTR_Equal(buf + size - 6, "ATE0\r\n", 6) || size < 5) {
                         HDEBUG_Log("HWIFI", "Initialized");
                         HWIFI_HandleResult(ctx, HWIFI_OK, buf);
                     } else {
@@ -318,6 +318,10 @@ void handle_recv(u8 *buf, u16 size)
     if (ctx_long & HWIFI_CTX_CLIENT) {
         if (HSTR_Equal(buf + size - 8, "CLOSED", 6)) {
             hwifi_ctx &= ~HWIFI_CTX_CLIENT;
+            if (hwifi_ctx & HWIFI_CTX_StartTCPConnection) {
+                hwifi_ctx &= ~HWIFI_CTX_StartTCPConnection;
+                hwifi_state = HWIFI_State_Idle;
+            }
             result_handler(HWIFI_CTX_CLIENT, HWIFI_CLOSED, NULL);
 
         } else if (HSTR_Equal(buf + 2, "+IPD", 4)) {
@@ -366,7 +370,7 @@ HWIFI_Context HWIFI_Init(UART *huart, void (*res_handler)(HWIFI_Context ctx, HWI
 void HWIFI_Update()
 {
     while (hwifi_handle_queue_tail != hwifi_handle_queue_head) {
-        __nop();
+        __NOP();
         if (hwifi_handle_queue[hwifi_handle_queue_tail] != NULL) {
             hwifi_handle_queue[hwifi_handle_queue_tail]();
             hwifi_handle_queue[hwifi_handle_queue_tail] = NULL;
