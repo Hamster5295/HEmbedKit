@@ -207,6 +207,36 @@ u8 *HSTR_I32ToString(i32 number)
     return str;
 }
 
+u8 *HSTR_FloatToString(float number, int digit)
+{
+    u8 i = 0;
+    u8 buffer[64];
+
+    i32 integer = (i32)number;
+    u8 *intStr  = HSTR_I32ToString(integer);
+
+    if (digit == 0) return intStr;
+    u16 len     = HSTR_GetLen(intStr);
+    buffer[len] = '.';
+
+    number -= integer;
+    for (i = 0; i < digit && i + len < 63; i++) {
+        number *= 10;
+        u8 val              = (u8)number;
+        buffer[i + len + 1] = val + '0';
+        number -= val;
+    }
+    buffer[i + len + 1] = HSTR_END_MARK;
+
+    HSTR_CopySize(buffer, intStr, len);
+    return HSTR_New(buffer);
+}
+
+u8 *HSTR_FloatToString_D4(float number)
+{
+    return HSTR_FloatToString(number, 3);
+}
+
 #ifdef ENABLE_HDEBUG
 u8 *HSTR_ErrorToString(HError err)
 {

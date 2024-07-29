@@ -158,6 +158,21 @@ u8 *HSTR_I16ToString(i16 number);
  */
 u8 *HSTR_I32ToString(i32 number);
 
+/**
+ * 将单精度浮点数转换为字符串
+ * @param number 要转换的数字
+ * @param digit 小数位数
+ * @return 字符串首位
+ */
+u8 *HSTR_FloatToString(float number, int digit);
+
+/**
+ * 将单精度浮点数转换为字符串，保留4位小数
+ * @param number 要转换的数字
+ * @return 字符串首位
+ */
+u8 *HSTR_FloatToString_D4(float number);
+
 #ifdef ENABLE_HDEBUG
 /**
  * 将错误代码转化为解释
