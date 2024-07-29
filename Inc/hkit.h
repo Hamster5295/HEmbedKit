@@ -30,7 +30,7 @@
 // HAL 库的数据类型
 #define STATUS HAL_StatusTypeDef
 
-#ifdef HAL_UART_STATE_READY
+#ifdef HAL_UART_ERROR_NONE
 #define UART UART_HandleTypeDef
 #endif
 
