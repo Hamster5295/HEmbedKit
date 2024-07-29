@@ -184,8 +184,7 @@ void handle_recv(u8 *buf, u16 size)
             break;
 
         case HWIFI_State_WaitForOK:
-            if (HWIFI_RECV_WITH_OK(size)) {
-
+            if (HWIFI_RECV_WITH_OK(size) || HWIFI_RECV_WITH_OK(size - 1)) {
                 switch (ctx) {
                     case HWIFI_CTX_StartTCPServer:
                         switch (hwifi_internal_state) {
@@ -215,6 +214,10 @@ void handle_recv(u8 *buf, u16 size)
                         }
                         break;
 
+                    case HWIFI_CTX_ScanWIFI:
+                        HWIFI_HandleResult(ctx, HWIFI_OK, buf);
+                        break;
+
                     case HWIFI_CTX_QueryStationIP:
                         u8 lptr = 10;
                         while (*(buf + lptr) != '"') lptr++;
@@ -229,6 +232,16 @@ void handle_recv(u8 *buf, u16 size)
                         rptr = (++lptr) + 1;
                         while (*(buf + rptr) != '"') rptr++;
                         HWIFI_HandleResult(ctx, HWIFI_OK, HSTR_NewSize(buf + lptr, rptr - lptr));
+                        break;
+
+                    case HWIFI_CTX_StartPassthrough:
+                        send_str("AT+CIPSEND\r\n");
+                        hwifi_state = HWIFI_State_WaitForSend;
+                        break;
+
+                    case HWIFI_CTX_StopPassthrough:
+                        hwifi_ctx &= ~HWIFI_CTX_Passthrough;
+                        HWIFI_HandleResult(ctx, HWIFI_OK, NULL);
                         break;
 
                     default:
@@ -249,6 +262,11 @@ void handle_recv(u8 *buf, u16 size)
                     case HWIFI_CTX_Send:
                     case HWIFI_CTX_PublishMQTT:
                         send(hwifi_send_buffer, hwifi_send_len);
+                        break;
+
+                    case HWIFI_CTX_StartPassthrough:
+                        hwifi_ctx |= HWIFI_CTX_Passthrough;
+                        HWIFI_HandleResult(ctx, HWIFI_OK, NULL);
                         break;
                 }
             } else if (HWIFI_RECV_WITH_OK(size)) {
@@ -563,18 +581,40 @@ HWIFI_Context HWIFI_QueryStationMAC()
     HWIFI_CALL_END_FOR_OK(HWIFI_CTX_QueryStationMAC);
 }
 
+HWIFI_Context HWIFI_StartPassthrough()
+{
+    HWIFI_ASSERT();
+    send_str("AT+CIPMODE=1\r\n");
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StartPassthrough);
+}
+
+HWIFI_Context HWIFI_StopPassthrough()
+{
+    HWIFI_ASSERT();
+    HAL_Delay(30);
+    send_str("+++");
+    HAL_Delay(30);
+    send_str("AT+CIPMODE=0\r\n");
+    HWIFI_CALL_END_FOR_OK(HWIFI_CTX_StopPassthrough);
+}
+
 HWIFI_Context HWIFI_Send(u8 *str, u16 len)
 {
     HWIFI_ASSERT();
 
-    HWIFI_ASSERT_SEND_LEN(len);
-    HSTR_CopySize(hwifi_send_buffer, str, len);
-    hwifi_send_len = len;
+    if (hwifi_ctx & HWIFI_CTX_Passthrough) {
+        send(str, len);
+        return HWIFI_CTX_Send;
+    } else {
+        HWIFI_ASSERT_SEND_LEN(len);
+        HSTR_CopySize(hwifi_send_buffer, str, len);
+        hwifi_send_len = len;
 
-    send_str("AT+CIPSEND=");
-    send_str(HSTR_U16ToString(len));
-    send_crlf();
-    HWIFI_CALL_END_FOR_SEND(HWIFI_CTX_Send);
+        send_str("AT+CIPSEND=");
+        send_str(HSTR_U16ToString(len));
+        send_crlf();
+        HWIFI_CALL_END_FOR_SEND(HWIFI_CTX_Send);
+    }
 }
 
 HWIFI_Context HWIFI_SendStr(u8 *str)
